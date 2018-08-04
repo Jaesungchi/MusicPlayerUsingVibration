@@ -1,17 +1,27 @@
 package com.ensharp.global_1.musicplayerusingvibration;
 
 import android.app.Activity;
+import android.app.Service;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
+import android.os.IBinder;
 import android.widget.Toast;
 
 public class BackPressCloseHandler {
     private long backKeyPressedTime = 0;
     private Toast toast;
     private Activity activity;
+    private Intent serviceIntent;
+    private PlayerService mService;
 
     // 생성자
-    public BackPressCloseHandler(Activity activity) {
+    public BackPressCloseHandler(Activity activity, PlayerService mService) {
         // 현재 Activity 받아서 설정
         this.activity = activity;
+        serviceIntent = new Intent(activity, PlayerService.class);
+        this.mService = mService;
     }
 
     // 뒤로가기 버튼 클릭 이벤트
@@ -26,6 +36,9 @@ public class BackPressCloseHandler {
         if(System.currentTimeMillis() <= backKeyPressedTime + 2000) {
             // if(현재 노래가 정지상태일 때) -> 서비스랑 액티비티 모두 종료
             // else -> 액티비티 종료되고 노래는 계속 재생됨
+            if(!mService.isPlaying()) {
+                mService.stopService(serviceIntent);
+            }
             android.os.Process.killProcess(android.os.Process.myPid());
             toast.cancel();
         }
@@ -37,4 +50,3 @@ public class BackPressCloseHandler {
         toast.show();
     }
 }
-
