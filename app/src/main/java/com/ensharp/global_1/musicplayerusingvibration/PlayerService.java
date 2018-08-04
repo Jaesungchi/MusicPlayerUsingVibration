@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.util.Log;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -36,6 +37,7 @@ public class PlayerService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+
         mConverter = new MusicConverter();
         mConverter.execute();
         mMusicList = null;
@@ -49,6 +51,7 @@ public class PlayerService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.e("service", "startService");
         Bundle bundle = intent.getExtras();
         String action = intent.getAction();
 
@@ -58,6 +61,7 @@ public class PlayerService extends Service {
 
         // 리스트에서 누른 노래를 재생
         if(bundle.containsKey("position")) {
+            Log.e("service", "position");
             int position = bundle.getInt("position");
             currentMusicPosition = position;
             mConverter.setMusicPath(mMusicList.get(position).getFilePath());
