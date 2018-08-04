@@ -1,13 +1,282 @@
 package com.ensharp.global_1.musicplayerusingvibration;
 
+import android.content.ComponentName;
+import android.content.ContentResolver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.media.MediaPlayer;
+import android.net.Uri;
+import android.os.Build;
+import android.os.IBinder;
+import android.provider.MediaStore;
+import android.renderscript.Allocation;
+import android.renderscript.Element;
+import android.renderscript.RenderScript;
+import android.renderscript.ScriptIntrinsicBlur;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.method.ScrollingMovementMethod;
+import android.util.Log;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.SeekBar;
+import android.widget.TextView;
 
-public class MusicActivity extends AppCompatActivity {
+import org.jaudiotagger.audio.AudioFileIO;
+import org.jaudiotagger.audio.mp3.MP3File;
+import org.jaudiotagger.tag.id3.AbstractID3v2Tag;
+
+import java.io.File;
+import java.util.ArrayList;
+
+public class MusicActivity extends AppCompatActivity implements View.OnClickListener{
+    private ArrayList<MusicVO> list;
+    private MediaPlayer mediaPlayer;
+    private LinearLayout topLayout;
+    private TextView title;
+    private TextView singer;
+    private ImageView album,previous,play,pause,next;
+    private TextView lyrics;
+    private SeekBar seekBar;
+    boolean isPlaying = true;
+    private ContentResolver res;
+    private ProgressUpdate progressUpdate;
+    private int position;
+
+    // Intent 선언
+    private Intent serviceIntent;
+
+    private PlayerService mService;
+    private boolean mBound;
+    private ServiceConnection mConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            PlayerService.LocalBinder binder = (PlayerService.LocalBinder) service;
+            mService = binder.getService();
+            mBound = true;
+        }
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            mBound = false;
+        }
+    };
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_music);
+
+        // intent 설정
+        //Intent intent = getIntent();
+        serviceIntent = new Intent(this, PlayerService.class);
+
+        // mediaPlayer 설정
+        // 이거 왠지 Service에서 해야할 것 같음
+        mediaPlayer = new MediaPlayer();
+
+        // UI적인 요소들 설정
+        title = (TextView)findViewById(R.id.title);
+        singer = (TextView)findViewById(R.id.singer);
+        album = (ImageView)findViewById(R.id.album);
+        seekBar = (SeekBar)findViewById(R.id.seekbar);
+        topLayout = (LinearLayout)findViewById(R.id.musicAct);
+        previous = (ImageView)findViewById(R.id.pre);
+        play = (ImageView)findViewById(R.id.play);
+        pause = (ImageView)findViewById(R.id.pause);
+        next = (ImageView)findViewById(R.id.next);
+        lyrics = (TextView)findViewById(R.id.lyrics);
+        lyrics.setMovementMethod(new ScrollingMovementMethod());
+
+        // 서비스에서 현재 음악파일 position 과 음악 리스트 가져오기
+        position = mService.getCurrentMusicPosition();
+        list = mService.getMusicList();
+        res = getContentResolver();
+
+        // 각 재생 관련 버튼들 클릭 이벤트 리스너 설정
+        previous.setOnClickListener(this);
+        play.setOnClickListener(this);
+        pause.setOnClickListener(this);
+        next.setOnClickListener(this);
+
+        // 현재 음악 재생
+        playMusic(list.get(position));
+        progressUpdate = new ProgressUpdate();
+        progressUpdate.start();
+
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                mediaPlayer.pause();
+                serviceIntent.putExtra("PlayerButton",PlayerService.PAUSE_BUTTON);
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                mediaPlayer.seekTo(seekBar.getProgress());
+                if(seekBar.getProgress()>0 && play.getVisibility()== View.GONE){
+                    mediaPlayer.start();
+                }
+                // 음악 프레임 위치 이동
+                double playRate = (double)mediaPlayer.getCurrentPosition() / mediaPlayer.getDuration();
+                // 컨버터 프레임 지정해주는 부분 아직 구현X
+                //mMusicConverter.setFrame(playRate);
+                serviceIntent.putExtra("PlayerButton",PlayerService.PLAY_BUTTON);
+            }
+        });
+
+        //
+        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                if(position+1<list.size()) {
+                    position++;
+                    playMusic(list.get(position));
+                }
+            }
+        });
+    }
+
+    @Override
+    protected void onStart(){
+        super.onStart();
+
+        serviceIntent = new Intent(this, PlayerService.class);
+        bindService(serviceIntent, mConnection, Context.BIND_AUTO_CREATE);
+    }
+
+
+    public static Bitmap blur(Context context, Bitmap sentBitmap, int radius) {
+
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN) {
+            Bitmap bitmap = sentBitmap.copy(sentBitmap.getConfig(), true);
+
+            final RenderScript rs = RenderScript.create(context);
+            final Allocation input = Allocation.createFromBitmap(rs, sentBitmap, Allocation.MipmapControl.MIPMAP_NONE,
+                    Allocation.USAGE_SCRIPT);
+            final Allocation output = Allocation.createTyped(rs, input.getType());
+            final ScriptIntrinsicBlur script = ScriptIntrinsicBlur.create(rs, Element.U8_4(rs));
+            script.setRadius(radius); //0.0f ~ 25.0f
+            script.setInput(input);
+            script.forEach(output);
+            output.copyTo(bitmap);
+            return bitmap;
+        }
+
+        return null;
+    }
+
+    public void playMusic(MusicVO musicDto) {
+        try {
+            Log.e("conv", "playMusic");
+            seekBar.setProgress(0);
+            File file = new File(musicDto.getFilePath());
+            try{
+                // MP3 파일 로드
+                MP3File mp3 = (MP3File) AudioFileIO.read(file);
+
+                AbstractID3v2Tag tag2 = mp3.getID3v2Tag();
+                if(tag2 != null)
+                    musicDto.setLyrics(tag2.toString());
+            }catch(Exception e) {
+                e.printStackTrace();
+            }
+
+            title.setText(musicDto.getTitle());
+            singer.setText(musicDto.getArtist());
+            seekBar.setMax(mediaPlayer.getDuration());
+
+            if(mediaPlayer.isPlaying()){
+                play.setVisibility(View.GONE);
+                pause.setVisibility(View.VISIBLE);
+            }else{
+                play.setVisibility(View.VISIBLE);
+                pause.setVisibility(View.GONE);
+            }
+
+            // byte 배열로 압축된 비트맵 이미지를 다시 변환함
+            byte[] albumBytes = new MyAdapter().getAlbumImage(getApplication(), Integer.parseInt(musicDto.getAlbumId()), 170);
+            Bitmap bitmap = BitmapFactory.decodeByteArray(albumBytes, 0, albumBytes.length);
+            album.setImageBitmap(bitmap);
+
+            // 앨범 이미지를 blur하고 어둡게 해서 배경으로 설정
+            Drawable drawable = new BitmapDrawable(blur(this, bitmap, 25));
+            drawable.setColorFilter(Color.parseColor("#BDBDBD"), PorterDuff.Mode.MULTIPLY);
+            topLayout.setBackground(drawable);
+
+
+            if(musicDto.getLyrics().contains("Lyrics")) {
+                int lyricsFirstLocation = musicDto.getLyrics().indexOf("Lyrics=") + 8;
+                int lyricsLastLocation = musicDto.getLyrics().indexOf("\"",lyricsFirstLocation);
+                lyrics.setText(musicDto.getLyrics().substring(lyricsFirstLocation, lyricsLastLocation));
+            }
+        }
+        catch (Exception e) {
+            Log.e("SimplePlayer", e.getMessage());
+        }
+
+        // 음악이 실행된 적이 없다면
+        if(!mService.isPlaying())
+            startService(serviceIntent);
+        serviceIntent.putExtra("PlayerButton",PlayerService.PLAY_BUTTON);
+    }
+
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()){
+            case R.id.play:
+                pause.setVisibility(View.VISIBLE);
+                play.setVisibility(View.GONE);
+                serviceIntent.putExtra("PlayerButton",PlayerService.PLAY_BUTTON);
+                break;
+            case R.id.pause:
+                pause.setVisibility(View.GONE);
+                play.setVisibility(View.VISIBLE);
+                serviceIntent.putExtra("PlayerButton",PlayerService.PAUSE_BUTTON);
+                break;
+            case R.id.pre:
+                serviceIntent.putExtra("PlayerButton",PlayerService.PREVIOUS_BUTTON);
+                break;
+            case R.id.next:
+                serviceIntent.putExtra("PlayerButton",PlayerService.NEXT_BUTTON);
+                break;
+        }
+    }
+
+    class ProgressUpdate extends Thread{
+        @Override
+        public void run() {
+            while(mService.isPlaying()){
+                try {
+                    Thread.sleep(500);
+                    if(mediaPlayer!=null){
+                        seekBar.setProgress(mediaPlayer.getCurrentPosition());
+                    }
+                } catch (Exception e) {
+                    Log.e("ProgressUpdate",e.getMessage());
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        serviceIntent.putExtra("PlayerButton",PlayerService.PAUSE_BUTTON);
+        if(mediaPlayer!=null){
+            mediaPlayer.release();
+            mediaPlayer = null;
+        }
     }
 }
