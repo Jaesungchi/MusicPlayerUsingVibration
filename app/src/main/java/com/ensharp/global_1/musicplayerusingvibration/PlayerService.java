@@ -17,6 +17,7 @@ public class PlayerService extends Service {
     private MusicConverter mConverter;
     private ArrayList<MusicVO> mMusicList;
     private int currentMusicPosition;
+    private NotificationPlayer mNotificationPlayer;
 
     static final int PLAY_BUTTON = 0;
     static final int PAUSE_BUTTON = 1;
@@ -34,14 +35,22 @@ public class PlayerService extends Service {
 
     @Override
     public void onCreate() {
+        super.onCreate();
         mConverter = new MusicConverter();
         mConverter.execute();
         mMusicList = null;
+        mNotificationPlayer = new NotificationPlayer(this);
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return mBinder;
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Bundle bundle = intent.getExtras();
+        String action = intent.getAction();
 
         // MusicList를 받아온다
         if(mMusicList == null)
@@ -57,6 +66,7 @@ public class PlayerService extends Service {
         // MusicActivity에서 버튼을 눌렀다면
         if(bundle.containsKey("PlayerButton")) {
             int button = bundle.getInt("PlayerButton");
+
             switch (button) {
                 case PLAY_BUTTON:
                     mConverter.play();
@@ -65,21 +75,48 @@ public class PlayerService extends Service {
                     mConverter.pause();
                     break;
                 case PREVIOUS_BUTTON:
-                    currentMusicPosition -= 1;
-                    if(currentMusicPosition < 0)
-                        currentMusicPosition = mMusicList.size() - 1;
-                    mConverter.setMusicPath(mMusicList.get(currentMusicPosition).getFilePath());
+                    setPreviousMusic();
                     break;
                 case NEXT_BUTTON:
-                    currentMusicPosition += 1;
-                    if(currentMusicPosition >= mMusicList.size())
-                        currentMusicPosition = 0;
-                    mConverter.setMusicPath(mMusicList.get(currentMusicPosition).getFilePath());
+                    setNextMusic();
                     break;
+            }
+            updateNotificationPlayer();
+        }
+
+        // notification bar controller에서 버튼을 눌렀을 때
+        if(action == null) {
+            if(CommandActions.TOGGLE_PLAY.equals(action)) {
+                if(isPlaying())
+                    mConverter.pause();
+                else
+                    mConverter.play();
+            }
+            else if(CommandActions.REWIND.equals(action))
+                setPreviousMusic();
+            else if(CommandActions.FORWARD.equals(action))
+                setNextMusic();
+            else if(CommandActions.CLOSE.equals(action)) {
+                mConverter.destroy();
+                removeNotificationPlayer();
             }
         }
 
         return START_REDELIVER_INTENT;
+    }
+
+    public void setPreviousMusic() {
+        currentMusicPosition -= 1;
+        if(currentMusicPosition < 0)
+            currentMusicPosition = mMusicList.size() - 1;
+        mConverter.setMusicPath(mMusicList.get(currentMusicPosition).getFilePath());
+    }
+
+    public void setNextMusic() {
+        currentMusicPosition += 1;
+        if(currentMusicPosition >= mMusicList.size())
+            currentMusicPosition = 0;
+        mConverter.setMusicPath(mMusicList.get(currentMusicPosition).getFilePath());
     }
 
     public int getCurrentMusicPosition() {
@@ -94,8 +131,21 @@ public class PlayerService extends Service {
         return mConverter.isCompletePlay();
     }
 
-    @Override
-    public IBinder onBind(Intent intent) {
-        return mBinder;
+    public boolean isPlaying() {
+        return mConverter.isPlaying();
+    }
+
+    public MusicVO getCurrentMusicVO() {
+        return mMusicList.get(currentMusicPosition);
+    }
+
+    private void updateNotificationPlayer() {
+        if(mNotificationPlayer != null)
+            mNotificationPlayer.updateNotificationPlayer();
+    }
+
+    private void removeNotificationPlayer() {
+        if(mNotificationPlayer != null)
+            mNotificationPlayer.removeNotificationPlayer();
     }
 }

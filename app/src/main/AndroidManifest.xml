@@ -25,7 +25,14 @@
         <service
             android:name=".PlayerService"
             android:enabled="true"
-            android:exported="true"></service>
+            android:exported="true" >
+            <intent-filter>
+                <action android:name="REWIND"/>
+                <action android:name="TOGGLE_PLAY"/>
+                <action android:name="FORWARD"/>
+                <action android:name="CLOSE"/>
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>
