@@ -114,7 +114,9 @@ public class MainActivity extends AppCompatActivity {
     // 뒤로가기 버튼 클릭 이벤트
     @Override
     public void onBackPressed() {
+        Intent serviceIntent = new Intent(this, PlayerService.class);
         backPressCloseHandler.onBackPressed();
+        stopService(serviceIntent);
     }
 
     // 음악 리스트 얻기
