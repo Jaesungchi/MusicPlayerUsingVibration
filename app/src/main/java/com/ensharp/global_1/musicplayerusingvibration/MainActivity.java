@@ -2,15 +2,18 @@ package com.ensharp.global_1.musicplayerusingvibration;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ComponentName;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Message;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
@@ -39,6 +42,24 @@ public class MainActivity extends AppCompatActivity {
     // intent
     public Intent mainIntent;
     private Intent serviceIntent;
+    public PlayerService mService;
+    private boolean mBound;
+    private ServiceConnection mConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            PlayerService.LocalBinder binder = (PlayerService.LocalBinder) service;
+            mService = binder.getService();
+            mBound = true;
+        }
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            mBound = false;
+        }
+    };
+
+    public PlayerService getmService(){
+        return mService;
+    }
 
     private final Handler mHandler = new Handler() {
         @Override
@@ -52,9 +73,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        // 뒤로가기 핸들러 설정
-        backPressCloseHandler = new BackPressCloseHandler(this);
 
         // 저장소 읽기 권한 얻기 실패하면 종료
         if(!isReadStoragePermissionGranted()) {
@@ -94,7 +112,18 @@ public class MainActivity extends AppCompatActivity {
             // 서비스에 블루투스 전달
             //intent.putExtra("blueTooth",(Serializable)btService);
             startService(serviceIntent);
+
+            // 뒤로가기 핸들러 설정
+            backPressCloseHandler = new BackPressCloseHandler(this, mService);
         }
+    }
+
+    @Override
+    protected void onStart(){
+        super.onStart();
+
+        serviceIntent = new Intent(this, PlayerService.class);
+        bindService(serviceIntent, mConnection, Context.BIND_AUTO_CREATE);
     }
 
     // 앱 나갔을 때 번들에 현재 액티비티 상태 저장
