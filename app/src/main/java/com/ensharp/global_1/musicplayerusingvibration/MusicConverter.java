@@ -23,6 +23,7 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
     private boolean destorying = false;
     // 노래 완료 상태
     private boolean completePlay = false;
+    private boolean converting = false;
 
 
     // 기준 주파수
@@ -56,6 +57,7 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
         pausing = true;
         completePlay = false;
         frame = 0;
+        converting = true;
 
         Log.e("conv", "변환 중...");
         mLoader.Open(path);
@@ -65,6 +67,11 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
         Log.e("conv", "변환 완료");
 
         pausing = false;
+        converting = false;
+    }
+
+    public boolean isConverting() {
+        return converting;
     }
 
     @Override

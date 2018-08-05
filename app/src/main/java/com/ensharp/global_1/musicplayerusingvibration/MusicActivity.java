@@ -1,7 +1,6 @@
 package com.ensharp.global_1.musicplayerusingvibration;
 
 import android.content.ComponentName;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
@@ -12,10 +11,8 @@ import android.graphics.PorterDuff;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.media.MediaPlayer;
-import android.net.Uri;
 import android.os.Build;
 import android.os.IBinder;
-import android.provider.MediaStore;
 import android.renderscript.Allocation;
 import android.renderscript.Element;
 import android.renderscript.RenderScript;
@@ -35,9 +32,10 @@ import org.jaudiotagger.audio.mp3.MP3File;
 import org.jaudiotagger.tag.id3.AbstractID3v2Tag;
 
 import java.io.File;
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class MusicActivity extends AppCompatActivity implements View.OnClickListener{
+public class MusicActivity extends AppCompatActivity implements View.OnClickListener {
     private ArrayList<MusicVO> list;
     private MediaPlayer mediaPlayer;
     private LinearLayout topLayout;
@@ -46,22 +44,28 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
     private ImageView album,previous,play,pause,next;
     private TextView lyrics;
     private SeekBar seekBar;
-    boolean isPlaying = true;
-    private ContentResolver res;
     private ProgressUpdate progressUpdate;
     private int position;
+    private boolean isPlaying;
 
-    // Intent 선언
-    private Intent serviceIntent;
+    private boolean mBound = false;
 
-    private PlayerService mService;
-    private boolean mBound;
     private ServiceConnection mConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             PlayerService.LocalBinder binder = (PlayerService.LocalBinder) service;
             mService = binder.getService();
             mBound = true;
+            isPlaying = true;
+
+            // 서비스에서 현재 음악파일 position 과 음악 리스트 가져오기
+            position = mService.getCurrentMusicPosition();
+            list = mService.getMusicList();
+
+            Log.e("music", "onServiceConnected - set");
+            setMusicContents(list.get(position));
+            progressUpdate = new ProgressUpdate();
+            progressUpdate.start();
         }
         @Override
         public void onServiceDisconnected(ComponentName name) {
@@ -69,18 +73,16 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         }
     };
 
+    // Intent 선언
+    private Intent serviceIntent;
+    private PlayerService mService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_music);
 
-        // intent 설정
-        //Intent intent = getIntent();
-        serviceIntent = new Intent(this, PlayerService.class);
-
         // mediaPlayer 설정
-        // 이거 왠지 Service에서 해야할 것 같음
         mediaPlayer = new MediaPlayer();
 
         // UI적인 요소들 설정
@@ -96,10 +98,8 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         lyrics = (TextView)findViewById(R.id.lyrics);
         lyrics.setMovementMethod(new ScrollingMovementMethod());
 
-        // 서비스에서 현재 음악파일 position 과 음악 리스트 가져오기
-        position = mService.getCurrentMusicPosition();
-        list = mService.getMusicList();
-        res = getContentResolver();
+        serviceIntent = new Intent(this, PlayerService.class);
+        bindService(serviceIntent, mConnection, Context.BIND_AUTO_CREATE);
 
         // 각 재생 관련 버튼들 클릭 이벤트 리스너 설정
         previous.setOnClickListener(this);
@@ -107,10 +107,8 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         pause.setOnClickListener(this);
         next.setOnClickListener(this);
 
-        // 현재 음악 재생
-        playMusic(list.get(position));
-        progressUpdate = new ProgressUpdate();
-        progressUpdate.start();
+        play.setVisibility(View.GONE);
+        pause.setVisibility(View.VISIBLE);
 
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -136,13 +134,14 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
             }
         });
 
-        //
         mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
             @Override
             public void onCompletion(MediaPlayer mp) {
                 if(position+1<list.size()) {
                     position++;
-                    playMusic(list.get(position));
+                    /*
+                    Log.e("music", "setMusicContents - set");
+                    setMusicContents(list.get(position));*/
                 }
             }
         });
@@ -151,11 +150,7 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
     @Override
     protected void onStart(){
         super.onStart();
-
-        serviceIntent = new Intent(this, PlayerService.class);
-        bindService(serviceIntent, mConnection, Context.BIND_AUTO_CREATE);
     }
-
 
     public static Bitmap blur(Context context, Bitmap sentBitmap, int radius) {
 
@@ -177,7 +172,9 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         return null;
     }
 
-    public void playMusic(MusicVO musicDto) {
+    public void setMusicContents(MusicVO musicDto) {
+        Log.e("music", "setMusicContents");
+        while (mService.isConverting());
         try {
             Log.e("conv", "playMusic");
             seekBar.setProgress(0);
@@ -196,14 +193,6 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
             title.setText(musicDto.getTitle());
             singer.setText(musicDto.getArtist());
             seekBar.setMax(mediaPlayer.getDuration());
-
-            if(mediaPlayer.isPlaying()){
-                play.setVisibility(View.GONE);
-                pause.setVisibility(View.VISIBLE);
-            }else{
-                play.setVisibility(View.VISIBLE);
-                pause.setVisibility(View.GONE);
-            }
 
             // byte 배열로 압축된 비트맵 이미지를 다시 변환함
             byte[] albumBytes = new MyAdapter().getAlbumImage(getApplication(), Integer.parseInt(musicDto.getAlbumId()), 170);
@@ -226,10 +215,9 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
             Log.e("SimplePlayer", e.getMessage());
         }
 
-        // 음악이 실행된 적이 없다면
+        serviceIntent.putExtra("PlayerButton",PlayerService.PLAY_BUTTON);
         if(!mService.isPlaying())
             startService(serviceIntent);
-        serviceIntent.putExtra("PlayerButton",PlayerService.PLAY_BUTTON);
     }
 
     @Override
@@ -239,17 +227,23 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
                 pause.setVisibility(View.VISIBLE);
                 play.setVisibility(View.GONE);
                 serviceIntent.putExtra("PlayerButton",PlayerService.PLAY_BUTTON);
+                startService(serviceIntent);
                 break;
             case R.id.pause:
                 pause.setVisibility(View.GONE);
                 play.setVisibility(View.VISIBLE);
                 serviceIntent.putExtra("PlayerButton",PlayerService.PAUSE_BUTTON);
+                startService(serviceIntent);
                 break;
             case R.id.pre:
                 serviceIntent.putExtra("PlayerButton",PlayerService.PREVIOUS_BUTTON);
+                startService(serviceIntent);
+                setMusicContents(mService.getCurrentMusicVO());
                 break;
             case R.id.next:
                 serviceIntent.putExtra("PlayerButton",PlayerService.NEXT_BUTTON);
+                startService(serviceIntent);
+                setMusicContents(mService.getCurrentMusicVO());
                 break;
         }
     }
@@ -273,7 +267,7 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        serviceIntent.putExtra("PlayerButton",PlayerService.PAUSE_BUTTON);
+        unbindService(mConnection);
         if(mediaPlayer!=null){
             mediaPlayer.release();
             mediaPlayer = null;

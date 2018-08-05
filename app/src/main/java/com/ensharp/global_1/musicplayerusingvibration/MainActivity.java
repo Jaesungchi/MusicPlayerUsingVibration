@@ -40,26 +40,11 @@ public class MainActivity extends AppCompatActivity {
     //public static BluetoothService btService = null; // 블루투스
 
     // intent
-    public Intent mainIntent;
+    private Intent mainIntent;
     private Intent serviceIntent;
-    public PlayerService mService;
-    private boolean mBound;
-    private ServiceConnection mConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            PlayerService.LocalBinder binder = (PlayerService.LocalBinder) service;
-            mService = binder.getService();
-            mBound = true;
-        }
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            mBound = false;
-        }
-    };
+    private Intent musicIntent;
 
-    public PlayerService getmService(){
-        return mService;
-    }
+    private PlayerService mService;
 
     private final Handler mHandler = new Handler() {
         @Override
@@ -79,51 +64,43 @@ public class MainActivity extends AppCompatActivity {
             System.exit(0);
         }
         else {
-            /*
-            // 블루투스 생성
-            btService = new BluetoothService(this, mHandler);
-            btService.enableBluetooth();
-            */
-
             // 디바이스 안에 있는 mp3 파일 리스트를 조회하여 List 생성
             getMusicList();
-            listView = (ListView)findViewById(R.id.listview);
+            listView = (ListView) findViewById(R.id.listview);
 
             // 음악리스트에 맞게 어댑터 생성 및 설정
-            MyAdapter adapter = new MyAdapter(this,list);;
+            MyAdapter adapter = new MyAdapter(this, list);
             listView.setAdapter(adapter);
 
             // intent 설정
             serviceIntent = new Intent(this, PlayerService.class);
             mainIntent = new Intent(this, MainActivity.class);
+            musicIntent = new Intent(this, MusicActivity.class);
+
+            // 서비스에 음악리스트를 전달
+            serviceIntent.putExtra("MusicList", (Serializable) list);
+            startService(serviceIntent);
+
+            // 뒤로가기 핸들러 설정
+            backPressCloseHandler = new BackPressCloseHandler(this, mService);
 
             // 음악리스트에 있는 각 음악들 클릭 이벤트
             listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                     // 음악 클릭 시 서비스에 position, list, musicConverter 전달
-                    serviceIntent.putExtra("position",position);
+                    Log.e("music", position + "");
+                    serviceIntent.putExtra("position", position);
                     startService(serviceIntent);
+                    startActivity(musicIntent);
                 }
             });
-
-            // 서비스에 음악리스트를 전달
-            serviceIntent.putExtra("MusicList",(Serializable)list);
-            // 서비스에 블루투스 전달
-            //intent.putExtra("blueTooth",(Serializable)btService);
-            startService(serviceIntent);
-
-            // 뒤로가기 핸들러 설정
-            backPressCloseHandler = new BackPressCloseHandler(this, mService);
         }
     }
 
     @Override
     protected void onStart(){
         super.onStart();
-
-        serviceIntent = new Intent(this, PlayerService.class);
-        bindService(serviceIntent, mConnection, Context.BIND_AUTO_CREATE);
     }
 
     // 앱 나갔을 때 번들에 현재 액티비티 상태 저장
@@ -144,7 +121,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         Intent serviceIntent = new Intent(this, PlayerService.class);
-        backPressCloseHandler.onBackPressed();
+        if(!mService.isPlaying())
+            backPressCloseHandler.onBackPressed();
         stopService(serviceIntent);
     }
 
@@ -306,35 +284,6 @@ public class MainActivity extends AppCompatActivity {
         }
         return null;
     }
-
-    /*
-    블투 관련
-    public void onActivityResult(int requestCode,int resultCode,Intent data){
-        switch(requestCode){
-            case REQUEST_CONNECT_DEVICE:
-                // When DeviceListActivity returns with a device to connect
-                if (resultCode == Activity.RESULT_OK) {
-                    btService.getDeviceInfo(data);
-                }
-                else{
-                    //취소를 눌렀을때
-                    btService.checkdouble = false;
-                }
-                break;
-            case REQUEST_ENABLE_BT:
-                if(resultCode == Activity.RESULT_OK){
-                    //확인 눌렀을때
-                    btService.scanDevice();
-                }
-                else{
-                    //취소를 눌렀을때
-                    btService.checkdouble = false;
-                }
-                break;
-        }
-    }
-*/
-
 
     /**
      * @param uri The Uri to check.

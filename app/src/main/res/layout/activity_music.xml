@@ -85,17 +85,16 @@
                 android:src="@drawable/previous"/>
 
             <ImageView
-                android:id="@+id/play"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:src="@drawable/play"/>
-
-            <ImageView
                 android:id="@+id/pause"
                 android:layout_width="60dp"
                 android:layout_height="60dp"
                 android:src="@drawable/pause" />
 
+            <ImageView
+                android:id="@+id/play"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:src="@drawable/play"/>
 
             <ImageView
                 android:id="@+id/next"

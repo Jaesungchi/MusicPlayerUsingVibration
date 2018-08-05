@@ -5,8 +5,11 @@ import android.content.Intent;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.Log;
 
+import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 
@@ -51,7 +54,6 @@ public class PlayerService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.e("service", "startService");
         Bundle bundle = intent.getExtras();
         String action = intent.getAction();
 
@@ -88,7 +90,7 @@ public class PlayerService extends Service {
             updateNotificationPlayer();
         }
 
-        // notification bar controller에서 버튼을 눌렀을 때
+        // notification bar controller 에서 버튼을 눌렀을 때
         if(action == null) {
             if(CommandActions.TOGGLE_PLAY.equals(action)) {
                 if(isPlaying())
@@ -129,6 +131,10 @@ public class PlayerService extends Service {
 
     public ArrayList<MusicVO> getMusicList() {
         return mMusicList;
+    }
+
+    public boolean isConverting() {
+        return mConverter.isConverting();
     }
 
     public boolean isCompletePlay() {
