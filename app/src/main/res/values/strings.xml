@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">MusicPlayerUsingVibration</string>
+    <!--  DeviceListActivity -->
+    <string name="scanning">다른 장치 찾는 중...</string>
+    <string name="select_device">블루투스 진동스피커를 눌러주세요.</string>
+    <string name="none_paired">페어링된 장치가 없습니다.</string>
+    <string name="none_found">장치가 없습니다.</string>
+    <string name="title_paired_devices">페어링된 장치</string>
+    <string name="title_other_devices">사용가능한 다른 장치</string>
+    <string name="button_scan">새로운 장치 검색</string>
 </resources>

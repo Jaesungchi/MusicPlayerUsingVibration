@@ -37,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
     String TAG = "";
     private static final int REQUEST_CONNECT_DEVICE = 1;
     private static final int REQUEST_ENABLE_BT = 2;
-    //public static BluetoothService btService = null; // 블루투스
+    public static BluetoothConnector btService = null; // 블루투스
 
     // intent
     public Intent mainIntent;
@@ -79,11 +79,9 @@ public class MainActivity extends AppCompatActivity {
             System.exit(0);
         }
         else {
-            /*
             // 블루투스 생성
-            btService = new BluetoothService(this, mHandler);
+            btService = new BluetoothConnector(this, mHandler);
             btService.enableBluetooth();
-            */
 
             // 디바이스 안에 있는 mp3 파일 리스트를 조회하여 List 생성
             getMusicList();
@@ -110,7 +108,7 @@ public class MainActivity extends AppCompatActivity {
             // 서비스에 음악리스트를 전달
             serviceIntent.putExtra("MusicList",(Serializable)list);
             // 서비스에 블루투스 전달
-            //intent.putExtra("blueTooth",(Serializable)btService);
+            //serviceIntent.putExtra("blueTooth",(Serializable)btService);
             startService(serviceIntent);
 
             // 뒤로가기 핸들러 설정
@@ -307,8 +305,7 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
-    /*
-    블투 관련
+    //블투 관련
     public void onActivityResult(int requestCode,int resultCode,Intent data){
         switch(requestCode){
             case REQUEST_CONNECT_DEVICE:
@@ -333,8 +330,6 @@ public class MainActivity extends AppCompatActivity {
                 break;
         }
     }
-*/
-
 
     /**
      * @param uri The Uri to check.

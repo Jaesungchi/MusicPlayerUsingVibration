@@ -83,6 +83,8 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
             toTransform = normalization(buffer);
             transformer.ft(toTransform);
 
+            MainActivity.btService.sendData(makeSignal(toTransform));
+
             Log.e("conv", makeSignal(toTransform));
 
             // 음악과 싱크를 맞추기 위한 sleep
