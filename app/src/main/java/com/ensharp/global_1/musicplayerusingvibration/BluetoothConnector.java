@@ -290,7 +290,7 @@ public class BluetoothConnector {
     void sendData(String msg) {
         msg += "\n";  // 문자열 종료표시 (\n)
         try{
-            mOutputStreamsou.write(msg.getBytes()); // OutputStream.write : 데이터를 쓸때는 write(byte[]) 메소드를 사용함. byte[] 안에 있는 데이터를 한번에 기록해 준다.
+            mOutputStream.write(msg.getBytes()); // OutputStream.write : 데이터를 쓸때는 write(byte[]) 메소드를 사용함. byte[] 안에 있는 데이터를 한번에 기록해 준다.
         }catch(Exception e) {  // 문자열 전송 도중 오류가 발생한 경우
             if(!checkdouble&&!checkOnline)
                 enableBluetooth();
