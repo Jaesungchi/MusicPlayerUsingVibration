@@ -2,6 +2,8 @@ package com.ensharp.global_1.musicplayerusingvibration;
 
 import android.Manifest;
 import android.app.Activity;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.ComponentName;
 import android.content.ContentUris;
 import android.content.Context;
@@ -30,7 +32,7 @@ import java.util.ArrayList;
 
 import javazoom.jl.player.Player;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements Serializable{
     private BackPressCloseHandler backPressCloseHandler;
     private ListView listView;
     public static ArrayList<MusicVO> list;
@@ -38,6 +40,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_CONNECT_DEVICE = 1;
     private static final int REQUEST_ENABLE_BT = 2;
     public static BluetoothConnector btService = null; // 블루투스
+
+    public Activity mActivity = this;
 
     // intent
     public Intent mainIntent;
@@ -73,16 +77,14 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        btService = new BluetoothConnector(this,mHandler);
+        btService.enableBluetooth();
 
         // 저장소 읽기 권한 얻기 실패하면 종료
         if(!isReadStoragePermissionGranted()) {
             System.exit(0);
         }
         else {
-            // 블루투스 생성
-            btService = new BluetoothConnector(this, mHandler);
-            btService.enableBluetooth();
-
             // 디바이스 안에 있는 mp3 파일 리스트를 조회하여 List 생성
             getMusicList();
             listView = (ListView)findViewById(R.id.listview);
@@ -101,6 +103,7 @@ public class MainActivity extends AppCompatActivity {
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                     // 음악 클릭 시 서비스에 position, list, musicConverter 전달
                     serviceIntent.putExtra("position",position);
+                    //serviceIntent.putExtra("Activity", (Serializable) mActivity);
                     startService(serviceIntent);
                 }
             });
@@ -329,6 +332,14 @@ public class MainActivity extends AppCompatActivity {
                 }
                 break;
         }
+    }
+
+    public void ConnectedThread(BluetoothSocket mmSocket, BluetoothDevice mmDevice){
+        mService.connected(mmSocket,mmDevice);
+    }
+
+    public void ConnectedThreadStop(){
+        mService.stop();
     }
 
     /**

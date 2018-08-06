@@ -24,15 +24,18 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
     // 노래 완료 상태
     private boolean completePlay = false;
 
+    private PlayerService pService = null;
+
 
     // 기준 주파수
     final int[] standardFrequencies = new int[]{63,125,250,500,1000,2000};
 
-    public MusicConverter() {
+    public MusicConverter(PlayerService mService) {
         super();
         frame = 0;
         mLoader = new SamplesLoader();
         pausing = true;
+        pService = mService;
     }
 
     public void pause() {
@@ -83,7 +86,7 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
             toTransform = normalization(buffer);
             transformer.ft(toTransform);
 
-            MainActivity.btService.sendData(makeSignal(toTransform));
+            pService.sendData(makeSignal(toTransform));
 
             Log.e("conv", makeSignal(toTransform));
 
