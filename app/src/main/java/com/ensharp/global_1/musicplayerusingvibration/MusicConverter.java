@@ -17,6 +17,7 @@ import ca.uol.aig.fftpack.RealDoubleFFT;
 public class MusicConverter extends AsyncTask<Void, double[], Void> implements Serializable {
     private SamplesLoader mLoader;
     private AudioEvent audioEvent;
+    private HammingWindow hammingWindow;
 
     // 한 프레임 당 sample 수
     private int blockSize = 0;
@@ -136,16 +137,22 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
     }
 
     public double[] normalization(short[] buffer) {
-        float[] window;
-        if(filter == TOUGH) {
+        float[] buf;
 
+        if(filter == TOUGH) {
+            buf = hammingWindow.generateCurve(buffer.length);
+            for (int i = 0; i < blockSize; i++)
+                normalized[i] = ((double) buffer[i] / Short.MAX_VALUE) * buf[i]; // 부호 있는 16비트
         }
         else if(filter == DELICACY) {
+            buf = new float[buffer.length];
+            for(int i=0; i < blockSize; i++)
+                buf[i] = ((float)buffer[i] / Short.MAX_VALUE);
+            audioEvent.setFloatBuffer(buf);
+            for(int i=0; i < blockSize; i++)
+                normalized[i] = buf[i] * audioEvent.getRMS();
+        }
 
-        }
-        for (int i = 0; i < blockSize; i++) {
-            normalized[i] = (double) buffer[i] / Short.MAX_VALUE; // 부호 있는 16비트
-        }
         return normalized;
     }
 
@@ -169,7 +176,9 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
                     max = frequencies[freq];
             }
 
-            temp = (int)max + "";
+            max *= 5.0;
+            temp = (int)(max) + "";
+
             if(temp.length() == 1)
                 temp = '0' + temp;
             if(temp.length() >= 3)
