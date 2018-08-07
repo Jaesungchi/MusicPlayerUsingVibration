@@ -1,7 +1,10 @@
 package com.ensharp.global_1.musicplayerusingvibration;
 
+import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.util.ArrayList;
 
 import javazoom.jl.decoder.Bitstream;
@@ -31,7 +34,7 @@ class SamplesLoader {
         }
     }
 
-    public static final int BUFFER_SIZE = 44100000;
+    public static final int BUFFER_SIZE = 256;
 
     private Decoder decoder;
     private ArrayList<Sample> samples;
@@ -39,7 +42,6 @@ class SamplesLoader {
     private int size;
 
     public SamplesLoader() {
-
     }
 
     public SamplesLoader(String path) {
@@ -47,7 +49,6 @@ class SamplesLoader {
     }
 
     public boolean IsInvalid() {
-        //return (decoder == null || out == null || samples == null || !out.isOpen());
         return (decoder == null || samples == null);
     }
 
@@ -58,16 +59,19 @@ class SamplesLoader {
         try {
             Header header;
             SampleBuffer sb;
-            FileInputStream in = new FileInputStream(path);
-            Bitstream bitstream = new Bitstream(in);
+            File file = new File(path);
+            InputStream inputStream = new BufferedInputStream(new FileInputStream(file), 8 * 1024);
+            Bitstream bitstream = new Bitstream(inputStream);
+
             if((header = bitstream.readFrame()) == null)
                 return false;
-            while(size < BUFFER_SIZE && header != null) {
+
+            while(header != null) {
                 sb = (SampleBuffer)decoder.decodeFrame(header, bitstream);
                 samples.add(new Sample(sb.getBuffer(), sb.getBufferLength()));
-                size++;
                 bitstream.closeFrame();
                 header = bitstream.readFrame();
+                size++;
             }
         } catch(FileNotFoundException e) {
             return false;

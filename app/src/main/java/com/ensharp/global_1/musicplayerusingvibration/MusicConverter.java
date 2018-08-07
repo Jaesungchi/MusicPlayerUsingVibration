@@ -1,6 +1,8 @@
 package com.ensharp.global_1.musicplayerusingvibration;
 
-import android.content.Intent;
+import android.media.AudioFormat;
+import android.media.AudioManager;
+import android.media.AudioTrack;
 import android.os.AsyncTask;
 import android.util.Log;
 
@@ -25,6 +27,9 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
     private boolean completePlay = false;
     private boolean converting = false;
 
+    // AudioTrack 변수
+    private int minSize;
+    private AudioTrack audioTrack;
 
     // 기준 주파수
     final int[] standardFrequencies = new int[]{63,125,250,500,1000,2000};
@@ -34,6 +39,9 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
         frame = 0;
         mLoader = new SamplesLoader();
         pausing = true;
+
+        minSize = AudioTrack.getMinBufferSize(44100, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT);
+        audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, 44100, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT, minSize, AudioTrack.MODE_STREAM);
     }
 
     public void pause() {
@@ -92,19 +100,14 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
 
             Log.e("conv", makeSignal(toTransform));
 
-            // 음악과 싱크를 맞추기 위한 sleep
-            try {
-                Thread.sleep(21);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            audioTrack.write(buffer, 0, buffer.length);
+            audioTrack.play();
 
             // 노래가 다 끝났으면
             if(frame >= mLoader.musicbuffers.length) {
                 pausing = true;
                 completePlay = true;
             }
-
 
             // 프로그램 종료 시
             if(destorying)

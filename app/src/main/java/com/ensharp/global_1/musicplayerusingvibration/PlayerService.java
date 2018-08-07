@@ -5,15 +5,9 @@ import android.content.Intent;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.os.Parcel;
-import android.os.Parcelable;
 import android.util.Log;
 
-import java.io.Serializable;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-
-import ca.uol.aig.fftpack.RealDoubleFFT;
 
 public class PlayerService extends Service {
     private IBinder mBinder = new LocalBinder();
