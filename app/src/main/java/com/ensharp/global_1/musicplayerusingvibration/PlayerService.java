@@ -22,6 +22,10 @@ public class PlayerService extends Service {
     static final int PREVIOUS_BUTTON = 2;
     static final int NEXT_BUTTON = 3;
 
+    public void changeFilter(int filter) {
+        mConverter.setFilter(filter);
+    }
+
     public class LocalBinder extends Binder {
         public PlayerService getService() {
             return PlayerService.this;
@@ -39,6 +43,7 @@ public class PlayerService extends Service {
         mConverter.execute();
         mMusicList = null;
         mNotificationPlayer = new NotificationPlayer(this);
+        mConverter.setFilter(MusicConverter.DELICACY);
     }
 
     @Override

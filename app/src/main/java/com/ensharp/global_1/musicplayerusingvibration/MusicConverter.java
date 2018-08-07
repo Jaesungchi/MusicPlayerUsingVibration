@@ -6,12 +6,17 @@ import android.media.AudioTrack;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import com.ensharp.global_1.musicplayerusingvibration.BandPassFilter.AudioEvent;
+import com.ensharp.global_1.musicplayerusingvibration.BandPassFilter.TarsosDSPAudioFloatConverter;
+import com.ensharp.global_1.musicplayerusingvibration.BandPassFilter.TarsosDSPAudioFormat;
+
 import java.io.Serializable;
 
 import ca.uol.aig.fftpack.RealDoubleFFT;
 
 public class MusicConverter extends AsyncTask<Void, double[], Void> implements Serializable {
     private SamplesLoader mLoader;
+    private AudioEvent audioEvent;
 
     // 한 프레임 당 sample 수
     private int blockSize = 0;
@@ -19,6 +24,8 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
     private RealDoubleFFT transformer;
     // 재생 중인 프레임
     private int frame;
+    // 현재 필터
+    private int filter;
 
     private double[] normalized;
     private boolean pausing;
@@ -31,6 +38,10 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
     private int minSize;
     private AudioTrack audioTrack;
 
+    // 변환 필터 상수
+    static final int TOUGH = 0;
+    static final int DELICACY = 1;
+
     // 기준 주파수
     final int[] standardFrequencies = new int[]{63,125,250,500,1000,2000};
 
@@ -42,6 +53,7 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
 
         minSize = AudioTrack.getMinBufferSize(44100, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT);
         audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, 44100, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT, minSize, AudioTrack.MODE_STREAM);
+        audioEvent = new AudioEvent(new TarsosDSPAudioFormat(TarsosDSPAudioFloatConverter.PCM_FLOAT, 44100, 256, AudioFormat.CHANNEL_IN_STEREO, blockSize, 40, true));
     }
 
     public void pause() {
@@ -124,6 +136,13 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
     }
 
     public double[] normalization(short[] buffer) {
+        float[] window;
+        if(filter == TOUGH) {
+
+        }
+        else if(filter == DELICACY) {
+
+        }
         for (int i = 0; i < blockSize; i++) {
             normalized[i] = (double) buffer[i] / Short.MAX_VALUE; // 부호 있는 16비트
         }
@@ -165,4 +184,7 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
         destorying = true;
     }
 
+    public void setFilter(int filter) {
+        this.filter = filter;
+    }
 }

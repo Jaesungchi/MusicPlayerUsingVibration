@@ -7,12 +7,23 @@
     android:orientation="vertical"
     android:background="#FFFF">
 
+    <ImageButton
+        android:id="@+id/menu_button"
+        android:layout_width="42dp"
+        android:layout_height="42dp"
+        android:layout_gravity="right"
+        android:layout_marginTop="8dp"
+        android:layout_marginRight="16dp"
+        android:src = "@drawable/menu"
+        android:scaleType="fitCenter"
+        android:background="@android:color/transparent"
+        android:onClick="showMenu"/>
+
     <TextView
         android:id="@+id/title"
         android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:layout_marginTop="16dp"
-        android:padding="10dp"
+        android:layout_height="40dp"
+        android:layout_marginRight="8dp"
         android:gravity="center"
         android:textSize="24dp"
         android:textColor="#fff"

@@ -12,18 +12,20 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.media.MediaPlayer;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.renderscript.Allocation;
 import android.renderscript.Element;
 import android.renderscript.RenderScript;
 import android.renderscript.ScriptIntrinsicBlur;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -32,10 +34,9 @@ import org.jaudiotagger.audio.mp3.MP3File;
 import org.jaudiotagger.tag.id3.AbstractID3v2Tag;
 
 import java.io.File;
-import java.io.Serializable;
 import java.util.ArrayList;
 
-public class MusicActivity extends AppCompatActivity implements View.OnClickListener {
+public class MusicActivity extends AppCompatActivity implements View.OnClickListener, PopupMenu.OnMenuItemClickListener {
     private ArrayList<MusicVO> list;
     private MediaPlayer mediaPlayer;
     private LinearLayout topLayout;
@@ -49,6 +50,9 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
     private boolean isPlaying;
 
     private boolean mBound = false;
+    // Intent 선언
+    private Intent serviceIntent;
+    private PlayerService mService;
 
     private ServiceConnection mConnection = new ServiceConnection() {
         @Override
@@ -72,10 +76,6 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
             mBound = false;
         }
     };
-
-    // Intent 선언
-    private Intent serviceIntent;
-    private PlayerService mService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -218,6 +218,28 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         serviceIntent.putExtra("PlayerButton",PlayerService.PLAY_BUTTON);
         if(!mService.isPlaying())
             startService(serviceIntent);
+    }
+
+    public void showMenu(View v) {
+        PopupMenu menu = new PopupMenu(this, v);
+        menu.setOnMenuItemClickListener(this);
+        menu.inflate(R.menu.menu_music);
+        menu.show();
+    }
+
+    @Override
+    public boolean onMenuItemClick(MenuItem item) {
+        switch (item.getItemId()) {
+            case MusicConverter.TOUGH:
+                mService.changeFilter(MusicConverter.TOUGH);
+                break;
+            case MusicConverter.DELICACY:
+                mService.changeFilter(MusicConverter.DELICACY);
+                break;
+            default:
+                return false;
+        }
+        return true;
     }
 
     @Override
