@@ -2,6 +2,8 @@ package com.ensharp.global_1.musicplayerusingvibration;
 
 import android.Manifest;
 import android.app.Activity;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.ComponentName;
 import android.content.ContentUris;
 import android.content.Context;
@@ -30,21 +32,20 @@ import java.util.ArrayList;
 
 import javazoom.jl.player.Player;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements Serializable{
     private BackPressCloseHandler backPressCloseHandler;
     private ListView listView;
     public static ArrayList<MusicVO> list;
     String TAG = "";
     private static final int REQUEST_CONNECT_DEVICE = 1;
     private static final int REQUEST_ENABLE_BT = 2;
-    //public static BluetoothService btService = null; // 블루투스
+    public static BluetoothConnector btConnector = null; // 블루투스
 
     // intent
     private Intent mainIntent;
     private Intent serviceIntent;
     private Intent musicIntent;
-
-    private PlayerService mService;
+    private PlayerService mService = null;
 
     private final Handler mHandler = new Handler() {
         @Override
@@ -72,6 +73,10 @@ public class MainActivity extends AppCompatActivity {
             MyAdapter adapter = new MyAdapter(this, list);
             listView.setAdapter(adapter);
 
+            btConnector = new BluetoothConnector(this,mHandler);
+            btConnector.enableBluetooth();
+            Log.e("jae", "1 " + btConnector.checkOnline);
+
             // intent 설정
             serviceIntent = new Intent(this, PlayerService.class);
             mainIntent = new Intent(this, MainActivity.class);
@@ -90,9 +95,16 @@ public class MainActivity extends AppCompatActivity {
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                     // 음악 클릭 시 서비스에 position, list, musicConverter 전달
                     Log.e("music", position + "");
-                    serviceIntent.putExtra("position", position);
-                    startService(serviceIntent);
-                    startActivity(musicIntent);
+                    Log.e("jae", btConnector.checkOnline + "");
+                    if(btConnector.checkOnline) {
+                        serviceIntent.putExtra("position", position);
+                       // serviceIntent.putExtra("bluetooth", new BluetoothInformation(btConnector.getmSocket(), btConnector.getmDevice()));
+                        startService(serviceIntent);
+                        startActivity(musicIntent);
+                    }
+                    else {
+                        btConnector.enableBluetooth();
+                    }
                 }
             });
         }
@@ -263,7 +275,6 @@ public class MainActivity extends AppCompatActivity {
         else if ("file".equalsIgnoreCase(uri.getScheme())) {
             return uri.getPath();
         }
-
         return null;
     }
 
@@ -284,6 +295,37 @@ public class MainActivity extends AppCompatActivity {
         }
         return null;
     }
+
+    //블루투스 관련
+    public void onActivityResult(int requestCode,int resultCode,Intent data){
+        switch(requestCode){
+            case REQUEST_CONNECT_DEVICE:
+                // When DeviceListActivity returns with a device to connect
+                if (resultCode == Activity.RESULT_OK) {
+                    btConnector.getDeviceInfo(data);
+                }
+                else{
+                    //취소를 눌렀을때
+                    btConnector.checkdouble = false;
+                }
+                break;
+            case REQUEST_ENABLE_BT:
+                if(resultCode == Activity.RESULT_OK){
+                    //확인 눌렀을때
+                    btConnector.scanDevice();
+                }
+                else{
+                    //취소를 눌렀을때
+                    btConnector.checkdouble = false;
+                }
+                break;
+        }
+    }
+
+//    public void ConnectedThreadStop(){
+//        if(mService != null)
+//        mService.stop();
+//    }
 
     /**
      * @param uri The Uri to check.

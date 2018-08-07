@@ -43,18 +43,23 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
     static final int TOUGH = 0;
     static final int DELICACY = 1;
 
+    private PlayerService pService = null;
+
     // 기준 주파수
     final int[] standardFrequencies = new int[]{63,125,250,500,1000,2000};
 
-    public MusicConverter() {
+    public MusicConverter(PlayerService mService) {
         super();
         frame = 0;
         mLoader = new SamplesLoader();
+        hammingWindow = new HammingWindow();
         pausing = true;
 
         minSize = AudioTrack.getMinBufferSize(44100, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT);
         audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, 44100, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT, minSize, AudioTrack.MODE_STREAM);
         audioEvent = new AudioEvent(new TarsosDSPAudioFormat(TarsosDSPAudioFloatConverter.PCM_FLOAT, 44100, 256, AudioFormat.CHANNEL_IN_STEREO, blockSize, 40, true));
+
+        pService = mService;
     }
 
     public void pause() {
@@ -110,6 +115,8 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
             // FFT를 처리하기 전에 0~1 사이 값으로 정규화
             toTransform = normalization(buffer);
             transformer.ft(toTransform);
+
+            pService.sendData(makeSignal(toTransform));
 
             Log.e("conv", makeSignal(toTransform));
 
