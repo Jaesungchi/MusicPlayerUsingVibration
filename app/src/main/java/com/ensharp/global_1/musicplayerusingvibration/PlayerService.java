@@ -86,10 +86,6 @@ public class PlayerService extends Service {
         if(mMusicList == null)
             mMusicList = (ArrayList<MusicVO>) bundle.getSerializable("MusicList");
 
-//        if(bundle.containsKey("bluetooth")) {
-//            BluetoothInformation infor = (BluetoothInformation)bundle.getSerializable("bluetooth");
-//            connected(infor.getSocket(), infor.getDevice());
-//        }
         // 블루투스 연결이 안 됐으면
         if(!bluetoothConnected) {
             if (MainActivity.btConnector.getmSocket() != null) {
@@ -243,7 +239,7 @@ public class PlayerService extends Service {
             OutputStream tmpOut = null;
             // BluetoothSocket의 inputstream 과 outputstream을 얻는다.
             try {
-                Log.d("jae","connected Good");1
+                Log.d("jae","connected Good");
                 tmpIn = socket.getInputStream();
                 tmpOut = socket.getOutputStream();
             } catch (IOException e) {
