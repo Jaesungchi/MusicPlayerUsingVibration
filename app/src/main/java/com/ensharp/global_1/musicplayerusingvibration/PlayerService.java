@@ -22,6 +22,7 @@ public class PlayerService extends Service {
     private ArrayList<MusicVO> mMusicList;
     private int currentMusicPosition;
     private NotificationPlayer mNotificationPlayer;
+    private MusicActivity mMusicActivity;
 
     static final int PLAY_BUTTON = 0;
     static final int PAUSE_BUTTON = 1;
@@ -105,6 +106,7 @@ public class PlayerService extends Service {
         // MusicActivity에서 버튼을 눌렀다면
         if(bundle.containsKey("PlayerButton")) {
             int button = bundle.getInt("PlayerButton");
+            mMusicActivity = bundle.getParcelable("MusicActivity");
 
             switch (button) {
                 case PLAY_BUTTON:
@@ -117,7 +119,7 @@ public class PlayerService extends Service {
                     setPreviousMusic();
                     break;
                 case NEXT_BUTTON:
-                    setNextMusic();
+                    setNextMusic(mMusicActivity);
                     break;
             }
             updateNotificationPlayer();
@@ -134,7 +136,7 @@ public class PlayerService extends Service {
             else if(CommandActions.REWIND.equals(action))
                 setPreviousMusic();
             else if(CommandActions.FORWARD.equals(action))
-                setNextMusic();
+                setNextMusic(mMusicActivity);
             else if(CommandActions.CLOSE.equals(action)) {
                 mConverter.destroy();
                 removeNotificationPlayer();
@@ -151,11 +153,13 @@ public class PlayerService extends Service {
         mConverter.setMusicPath(mMusicList.get(currentMusicPosition).getFilePath());
     }
 
-    public void setNextMusic() {
+    public void setNextMusic(MusicActivity mMusicActivity) {
         currentMusicPosition += 1;
         if(currentMusicPosition >= mMusicList.size())
             currentMusicPosition = 0;
         mConverter.setMusicPath(mMusicList.get(currentMusicPosition).getFilePath());
+        if(mMusicActivity != null)
+            mMusicActivity.setMusicContents(mMusicList.get(currentMusicPosition), this);
     }
 
     public int getCurrentMusicPosition() {

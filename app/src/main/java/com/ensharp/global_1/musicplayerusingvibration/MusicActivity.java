@@ -14,6 +14,8 @@ import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.renderscript.Allocation;
 import android.renderscript.Element;
 import android.renderscript.RenderScript;
@@ -36,7 +38,7 @@ import org.jaudiotagger.tag.id3.AbstractID3v2Tag;
 import java.io.File;
 import java.util.ArrayList;
 
-public class MusicActivity extends AppCompatActivity implements View.OnClickListener, PopupMenu.OnMenuItemClickListener {
+public class MusicActivity extends AppCompatActivity implements View.OnClickListener, PopupMenu.OnMenuItemClickListener, Parcelable {
     private ArrayList<MusicVO> list;
     private MediaPlayer mediaPlayer;
     private LinearLayout topLayout;
@@ -67,13 +69,47 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
             list = mService.getMusicList();
 
             Log.e("music", "onServiceConnected - set");
-            setMusicContents(list.get(position));
+            setMusicContents(list.get(position), mService);
             progressUpdate = new ProgressUpdate();
             progressUpdate.start();
         }
         @Override
         public void onServiceDisconnected(ComponentName name) {
             mBound = false;
+        }
+    };
+
+    public MusicActivity() {}
+
+    protected MusicActivity(Parcel in) {
+        position = in.readInt();
+        isPlaying = in.readByte() != 0;
+        mBound = in.readByte() != 0;
+        serviceIntent = in.readParcelable(Intent.class.getClassLoader());
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeInt(position);
+        dest.writeByte((byte) (isPlaying ? 1 : 0));
+        dest.writeByte((byte) (mBound ? 1: 0));
+        //dest.writeParcelable(serviceIntent, flags);
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    public static final Creator<MusicActivity> CREATOR = new Creator<MusicActivity>() {
+        @Override
+        public MusicActivity createFromParcel(Parcel in) {
+            return new MusicActivity(in);
+        }
+
+        @Override
+        public MusicActivity[] newArray(int size) {
+            return new MusicActivity[size];
         }
     };
 
@@ -172,8 +208,9 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         return null;
     }
 
-    public void setMusicContents(MusicVO musicDto) {
+    public void setMusicContents(MusicVO musicDto, PlayerService playerService) {
         Log.e("music", "setMusicContents");
+        mService = playerService;
         while (mService.isConverting());
         try {
             Log.e("conv", "playMusic");
@@ -260,12 +297,14 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
             case R.id.pre:
                 serviceIntent.putExtra("PlayerButton",PlayerService.PREVIOUS_BUTTON);
                 startService(serviceIntent);
-                setMusicContents(mService.getCurrentMusicVO());
+                //setMusicContents(mService.getCurrentMusicVO());
                 break;
             case R.id.next:
                 serviceIntent.putExtra("PlayerButton",PlayerService.NEXT_BUTTON);
+                serviceIntent.putExtra("PlayerService", this);
+                bindService(serviceIntent, mConnection, Context.BIND_AUTO_CREATE);
                 startService(serviceIntent);
-                setMusicContents(mService.getCurrentMusicVO());
+                //setMusicContents(mService.getCurrentMusicVO());
                 break;
         }
     }
