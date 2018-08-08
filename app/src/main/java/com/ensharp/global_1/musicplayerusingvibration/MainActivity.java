@@ -2,26 +2,21 @@ package com.ensharp.global_1.musicplayerusingvibration;
 
 import android.Manifest;
 import android.app.Activity;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothSocket;
-import android.content.ComponentName;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Message;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -29,8 +24,6 @@ import android.widget.ListView;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-
-import javazoom.jl.player.Player;
 
 public class MainActivity extends AppCompatActivity implements Serializable{
     private BackPressCloseHandler backPressCloseHandler;
@@ -45,7 +38,6 @@ public class MainActivity extends AppCompatActivity implements Serializable{
     private Intent mainIntent;
     private Intent serviceIntent;
     private Intent musicIntent;
-    private PlayerService mService = null;
 
     private final Handler mHandler = new Handler() {
         @Override
@@ -59,6 +51,8 @@ public class MainActivity extends AppCompatActivity implements Serializable{
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        Log.e("yeongjoon", "Main-onCreate");
 
         // 저장소 읽기 권한 얻기 실패하면 종료
         if(!isReadStoragePermissionGranted()) {
@@ -75,7 +69,6 @@ public class MainActivity extends AppCompatActivity implements Serializable{
 
             btConnector = new BluetoothConnector(this,mHandler);
             btConnector.enableBluetooth();
-            Log.e("jae", "1 " + btConnector.checkOnline);
 
             // intent 설정
             serviceIntent = new Intent(this, PlayerService.class);
@@ -87,7 +80,7 @@ public class MainActivity extends AppCompatActivity implements Serializable{
             startService(serviceIntent);
 
             // 뒤로가기 핸들러 설정
-            backPressCloseHandler = new BackPressCloseHandler(this, mService);
+            backPressCloseHandler = new BackPressCloseHandler(this);
 
             // 음악리스트에 있는 각 음악들 클릭 이벤트
             listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -113,6 +106,13 @@ public class MainActivity extends AppCompatActivity implements Serializable{
     @Override
     protected void onStart(){
         super.onStart();
+        Log.e("yeongjoon", "Main-onStart");
+    }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        Log.e("yeongjoon", "Main-onRestart");
     }
 
     // 앱 나갔을 때 번들에 현재 액티비티 상태 저장
@@ -133,9 +133,16 @@ public class MainActivity extends AppCompatActivity implements Serializable{
     @Override
     public void onBackPressed() {
         Intent serviceIntent = new Intent(this, PlayerService.class);
-        if(!mService.isPlaying())
-            backPressCloseHandler.onBackPressed();
-        stopService(serviceIntent);
+        // 노래가 재생되고 있는 상태가 아니라면
+        if(!PlayerService.PLAY_STATE) {
+            if (backPressCloseHandler.onBackPressed()) ;
+            stopService(serviceIntent);
+        }
+        // 액티비티 종료
+        else {
+            finish();
+
+        }
     }
 
     // 음악 리스트 얻기

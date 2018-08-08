@@ -28,24 +28,22 @@ public class PlayerService extends Service {
     static final int PREVIOUS_BUTTON = 2;
     static final int NEXT_BUTTON = 3;
 
-    public static String btDevice = null;
 
     private boolean bluetoothConnected = false;
     private static final String TAG = "BluetoothService";
 
-    // RFCOMM Protocol
-    private static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
-
     private ConnectedThread mConnectedThread;
 
     private int mState;
+
     // 상태를 나타내는 상태 변수
     private static final int STATE_NONE = 0; // we're doing nothing
     private static final int STATE_LISTEN = 1; // now listening for incoming connections
     private static final int STATE_CONNECTING = 2; // now initiating an outgoing connection
     private static final int STATE_CONNECTED = 3; // now connected to a remote device
 
-   // public MainActivity mActivity;
+    public static boolean PLAY_STATE = false;
+
     public OutputStream mOutputStream;
 
     public void changeFilter(int filter) {
@@ -86,10 +84,6 @@ public class PlayerService extends Service {
         if(mMusicList == null)
             mMusicList = (ArrayList<MusicVO>) bundle.getSerializable("MusicList");
 
-//        if(bundle.containsKey("bluetooth")) {
-//            BluetoothInformation infor = (BluetoothInformation)bundle.getSerializable("bluetooth");
-//            connected(infor.getSocket(), infor.getDevice());
-//        }
         // 블루투스 연결이 안 됐으면
         if(!bluetoothConnected) {
             if (MainActivity.btConnector.getmSocket() != null) {
@@ -243,7 +237,7 @@ public class PlayerService extends Service {
             OutputStream tmpOut = null;
             // BluetoothSocket의 inputstream 과 outputstream을 얻는다.
             try {
-                Log.d("jae","connected Good");1
+                Log.d("jae","connected Good");
                 tmpIn = socket.getInputStream();
                 tmpOut = socket.getOutputStream();
             } catch (IOException e) {

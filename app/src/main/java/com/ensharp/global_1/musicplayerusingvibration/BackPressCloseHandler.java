@@ -16,25 +16,27 @@ public class BackPressCloseHandler {
     private Intent serviceIntent;
 
     // 생성자
-    public BackPressCloseHandler(Activity activity, PlayerService mService) {
+    public BackPressCloseHandler(Activity activity) {
         // 현재 Activity 받아서 설정
         this.activity = activity;
         serviceIntent = new Intent(activity, PlayerService.class);
     }
 
     // 뒤로가기 버튼 클릭 이벤트
-    public void onBackPressed() {
+    public boolean onBackPressed() {
         // 버튼 길게 누를시 안내 메세지 표시
         if(System.currentTimeMillis() > backKeyPressedTime + 2000) {
             backKeyPressedTime = System.currentTimeMillis();
             showGuide();
-            return;
+            return false;
         }
         // 버튼 짧게 누르고 현재 노래 정지 상태일 때 프로그램 종료
         if(System.currentTimeMillis() <= backKeyPressedTime + 2000) {
             android.os.Process.killProcess(android.os.Process.myPid());
             toast.cancel();
+            return true;
         }
+        return false;
     }
 
     // 안내 메세지

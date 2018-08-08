@@ -64,10 +64,12 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
 
     public void pause() {
         pausing = true;
+        PlayerService.PLAY_STATE = false;
     }
 
     public void play() {
         pausing = false;
+        PlayerService.PLAY_STATE = true;
     }
 
     public boolean isPlaying() {
@@ -94,6 +96,7 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
 
         pausing = false;
         converting = false;
+        PlayerService.PLAY_STATE = true;
     }
 
     public boolean isConverting() {
