@@ -5,8 +5,11 @@ import android.app.Activity;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -20,13 +23,17 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements Serializable{
+public class MainActivity extends AppCompatActivity implements Serializable, View.OnClickListener {
     private BackPressCloseHandler backPressCloseHandler;
+
     private ListView listView;
     public static ArrayList<MusicVO> list;
     String TAG = "";
@@ -38,6 +45,14 @@ public class MainActivity extends AppCompatActivity implements Serializable{
     private Intent mainIntent;
     private Intent serviceIntent;
     private Intent musicIntent;
+
+    // 현재 재생 중인 노래
+    private TextView title;
+    private TextView singer;
+    private ImageView album, previous, play, pause, next;
+
+    // SharedPreferences 파일 변수
+    private SharedPreferences preferences;
 
     private final Handler mHandler = new Handler() {
         @Override
@@ -51,6 +66,8 @@ public class MainActivity extends AppCompatActivity implements Serializable{
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        preferences = getSharedPreferences("preferences", MODE_PRIVATE);
 
         Log.e("yeongjoon", "Main-onCreate");
 
@@ -82,6 +99,24 @@ public class MainActivity extends AppCompatActivity implements Serializable{
             // 뒤로가기 핸들러 설정
             backPressCloseHandler = new BackPressCloseHandler(this);
 
+            // 하단바 UI 설정
+            title = (TextView)findViewById(R.id.currentMusicTitle);
+            singer = (TextView)findViewById(R.id.currentMusicSinger);
+            album = (ImageView)findViewById(R.id.currentMusicAlbum);
+
+            previous = (ImageView)findViewById(R.id.currentMusicPrevious);
+            next = (ImageView)findViewById(R.id.currentMusicNext);
+            play = (ImageView)findViewById(R.id.currentMusicPlay);
+            pause = (ImageView)findViewById(R.id.currentMusicPause);
+
+            previous.setOnClickListener(this);
+            next.setOnClickListener(this);
+            play.setOnClickListener(this);
+            pause.setOnClickListener(this);
+
+            pause.setVisibility(View.GONE);
+            play.setVisibility(View.VISIBLE);
+
             // 음악리스트에 있는 각 음악들 클릭 이벤트
             listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
@@ -91,7 +126,11 @@ public class MainActivity extends AppCompatActivity implements Serializable{
                     Log.e("jae", btConnector.checkOnline + "");
                     if(btConnector.checkOnline) {
                         serviceIntent.putExtra("position", position);
-                       // serviceIntent.putExtra("bluetooth", new BluetoothInformation(btConnector.getmSocket(), btConnector.getmDevice()));
+
+                        // preferences 파일 업데이트 후 하단바 업데이트
+                        updateCurrentMusicFile(list, position);
+                        updateCurrentMusicPlayerBar();
+
                         startService(serviceIntent);
                         startActivity(musicIntent);
                     }
@@ -113,6 +152,7 @@ public class MainActivity extends AppCompatActivity implements Serializable{
     protected void onRestart() {
         super.onRestart();
         Log.e("yeongjoon", "Main-onRestart");
+        updateCurrentMusicPlayerBar();
     }
 
     // 앱 나갔을 때 번들에 현재 액티비티 상태 저장
@@ -127,6 +167,7 @@ public class MainActivity extends AppCompatActivity implements Serializable{
     public void onResume() {
         super.onResume();
         getIntent().getExtras();
+        updateCurrentMusicPlayerBar();
     }
 
     // 뒤로가기 버튼 클릭 이벤트
@@ -141,7 +182,6 @@ public class MainActivity extends AppCompatActivity implements Serializable{
         // 액티비티 종료
         else {
             finish();
-
         }
     }
 
@@ -175,6 +215,49 @@ public class MainActivity extends AppCompatActivity implements Serializable{
             list.add(musicVO);
         }
         cursor.close();
+    }
+
+    // 하단바 업데이트
+    private void updateCurrentMusicPlayerBar(){
+        // 현재 재생 중인 음악이 있으면
+        if(preferences != null && preferences.getString("currentMusicAlbum","") != ""){
+            // 노래 제목, 가수명 값 불러오기
+            title.setText(preferences.getString("currentMusicTitle",""));
+            singer.setText(preferences.getString("currentMusicSinger",""));
+
+            Log.e("title",title.getText()+"");
+            Log.e("signer",singer.getText()+"");
+
+            // 앨범 이미지 값 불러오기
+            byte[] albumBytes = new MyAdapter().getAlbumImage(getApplication(),
+                    Integer.parseInt(preferences.getString("currentMusicAlbum","")),
+                    170);
+            Bitmap bitmap = BitmapFactory.decodeByteArray(albumBytes, 0, albumBytes.length);
+            album.setImageBitmap(bitmap);
+
+            Log.e("preferences","not null, update complete");
+        }
+        else
+        {
+            Log.e("preferences","null");
+        }
+    }
+
+    // preferences 파일 업데이트
+    public void updateCurrentMusicFile(List<MusicVO> list, int currentMusicPosition){
+        // 현재 음악파일 VO
+        MusicVO currentMusicVO = list.get(currentMusicPosition);
+        SharedPreferences.Editor editor = preferences.edit();
+
+        // preferences 값 모두 삭제하기
+        editor.clear();
+        editor.commit();
+
+        // preferences에 현재 재생 음악 정보 저장하기
+        editor.putString("currentMusicTitle", currentMusicVO.getTitle());
+        editor.putString("currentMusicSinger", currentMusicVO.getArtist());
+        editor.putString("currentMusicAlbum", currentMusicVO.getAlbumId());
+        editor.commit();
     }
 
     // 저장소 읽기 권한 확인 여부
@@ -364,5 +447,29 @@ public class MainActivity extends AppCompatActivity implements Serializable{
      */
     public static boolean isGooglePhotosUri(Uri uri) {
         return "com.google.android.apps.photos.content".equals(uri.getAuthority());
+    }
+
+    // 하단바 클릭이벤트
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()){
+            case R.id.currentMusicPlay:
+                pause.setVisibility(View.VISIBLE);
+                play.setVisibility(View.GONE);
+                serviceIntent.putExtra("PlayerButton",PlayerService.PLAY_BUTTON);
+                break;
+            case R.id.currentMusicPause:
+                pause.setVisibility(View.GONE);
+                play.setVisibility(View.VISIBLE);
+                serviceIntent.putExtra("PlayerButton",PlayerService.PAUSE_BUTTON);
+                break;
+            case R.id.currentMusicPrevious:
+                serviceIntent.putExtra("PlayerButton",PlayerService.PREVIOUS_BUTTON);
+                break;
+            case R.id.currentMusicNext:
+                serviceIntent.putExtra("PlayerButton",PlayerService.NEXT_BUTTON);
+                break;
+        }
+        startService(serviceIntent);
     }
 }

@@ -4,6 +4,7 @@ import android.app.Service;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -28,7 +29,6 @@ public class PlayerService extends Service {
     static final int PREVIOUS_BUTTON = 2;
     static final int NEXT_BUTTON = 3;
 
-
     private boolean bluetoothConnected = false;
     private static final String TAG = "BluetoothService";
 
@@ -41,6 +41,9 @@ public class PlayerService extends Service {
     private static final int STATE_LISTEN = 1; // now listening for incoming connections
     private static final int STATE_CONNECTING = 2; // now initiating an outgoing connection
     private static final int STATE_CONNECTED = 3; // now connected to a remote device
+
+    // SharedPreferences 파일 변수
+    private SharedPreferences preferences;
 
     public static boolean PLAY_STATE = false;
 
@@ -68,6 +71,7 @@ public class PlayerService extends Service {
         mMusicList = null;
         mNotificationPlayer = new NotificationPlayer(this);
         mConverter.setFilter(MusicConverter.DELICACY);
+        preferences = getSharedPreferences("preferences", MODE_PRIVATE);
     }
 
     @Override
@@ -97,6 +101,7 @@ public class PlayerService extends Service {
             Log.e("service", "position");
             int position = bundle.getInt("position");
             currentMusicPosition = position;
+            updateCurrentMusicFile();
             mConverter.setMusicPath(mMusicList.get(position).getFilePath());
         }
 
@@ -137,9 +142,26 @@ public class PlayerService extends Service {
                 mConverter.destroy();
                 removeNotificationPlayer();
             }
+            updateCurrentMusicFile();
         }
 
         return START_REDELIVER_INTENT;
+    }
+
+    public void updateCurrentMusicFile(){
+        // 현재 음악파일 VO
+        MusicVO currentMusicVO = mMusicList.get(currentMusicPosition);
+        SharedPreferences.Editor editor = preferences.edit();
+
+        // preferences 값 모두 삭제하기
+        editor.clear();
+        editor.commit();
+
+        // preferences에 현재 재생 음악 정보 저장하기
+        editor.putString("currentMusicTitle", currentMusicVO.getTitle());
+        editor.putString("currentMusicSinger", currentMusicVO.getArtist());
+        editor.putString("currentMusicAlbum", currentMusicVO.getAlbumId());
+        editor.commit();
     }
 
     public void setPreviousMusic() {
