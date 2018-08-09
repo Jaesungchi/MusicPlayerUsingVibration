@@ -26,10 +26,8 @@ import com.ensharp.global_1.musicplayerusingvibration.R;
  */
 
 class AnalyzerParameters {
-    final int RECORDER_AGC_OFF = MediaRecorder.AudioSource.VOICE_RECOGNITION;
-    int audioSourceId = RECORDER_AGC_OFF;
-    int sampleRate = 16000;
-    int fftLen = 2048;
+    int sampleRate = 44100;
+    int fftLen = 512;
     int hopLen = 1024;
     double overlapPercent = 50;  // = (1 - hopLen/fftLen) * 100%
     String wndFuncName;
