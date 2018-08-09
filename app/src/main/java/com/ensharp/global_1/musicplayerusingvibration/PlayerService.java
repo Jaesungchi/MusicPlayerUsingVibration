@@ -85,11 +85,11 @@ public class PlayerService extends Service {
         String action = intent.getAction();
 
         // MusicList를 받아온다
-        if(mMusicList == null)
+        if (mMusicList == null)
             mMusicList = (ArrayList<MusicVO>) bundle.getSerializable("MusicList");
 
         // 블루투스 연결이 안 됐으면
-        if(!bluetoothConnected) {
+        if (!bluetoothConnected) {
             if (MainActivity.btConnector.getmSocket() != null) {
                 connected(MainActivity.btConnector.mmSocket, MainActivity.btConnector.mmDevice);
                 bluetoothConnected = true;
@@ -97,7 +97,7 @@ public class PlayerService extends Service {
         }
 
         // 리스트에서 누른 노래를 재생
-        if(bundle.containsKey("position")) {
+        if (bundle.containsKey("position")) {
             Log.e("service", "position");
             int position = bundle.getInt("position");
             currentMusicPosition = position;
@@ -107,7 +107,7 @@ public class PlayerService extends Service {
         }
 
         // MusicActivity에서 버튼을 눌렀다면
-        if(bundle.containsKey("PlayerButton")) {
+        if (bundle.containsKey("PlayerButton")) {
             int button = bundle.getInt("PlayerButton");
 
             switch (button) {
@@ -126,22 +126,20 @@ public class PlayerService extends Service {
                     setNextMusic();
                     break;
             }
-
         }
 
         // notification bar controller 에서 버튼을 눌렀을 때
-        if(action == null) {
-            if(CommandActions.TOGGLE_PLAY.equals(action)) {
-                if(isPlaying())
+        if (action == null) {
+            if (CommandActions.TOGGLE_PLAY.equals(action)) {
+                if (isPlaying())
                     mConverter.pause();
                 else
                     mConverter.play();
-            }
-            else if(CommandActions.REWIND.equals(action))
+            } else if (CommandActions.REWIND.equals(action))
                 setPreviousMusic();
-            else if(CommandActions.FORWARD.equals(action))
+            else if (CommandActions.FORWARD.equals(action))
                 setNextMusic();
-            else if(CommandActions.CLOSE.equals(action)) {
+            else if (CommandActions.CLOSE.equals(action)) {
                 mConverter.destroy();
                 removeNotificationPlayer();
             }
@@ -151,7 +149,7 @@ public class PlayerService extends Service {
         return START_REDELIVER_INTENT;
     }
 
-    public void updateCurrentMusicFile(){
+    public void updateCurrentMusicFile() {
         // 현재 음악파일 VO
         MusicVO currentMusicVO = mMusicList.get(currentMusicPosition);
         SharedPreferences.Editor editor = preferences.edit();
@@ -169,7 +167,7 @@ public class PlayerService extends Service {
 
     public void setPreviousMusic() {
         currentMusicPosition -= 1;
-        if(currentMusicPosition < 0)
+        if (currentMusicPosition < 0)
             currentMusicPosition = mMusicList.size() - 1;
         mConverter.setMusicPath(mMusicList.get(currentMusicPosition).getFilePath());
         updateNotificationPlayer();
@@ -177,7 +175,7 @@ public class PlayerService extends Service {
 
     public void setNextMusic() {
         currentMusicPosition += 1;
-        if(currentMusicPosition >= mMusicList.size())
+        if (currentMusicPosition >= mMusicList.size())
             currentMusicPosition = 0;
         mConverter.setMusicPath(mMusicList.get(currentMusicPosition).getFilePath());
         updateNotificationPlayer();
@@ -205,6 +203,14 @@ public class PlayerService extends Service {
 
     public MusicVO getCurrentMusicVO() {
         return mMusicList.get(currentMusicPosition);
+    }
+
+    public int getCurrentProgress() {
+        return (int) (mConverter.getCurrentProgressRate() * 200);
+    }
+
+    public void setFrame(int progress) {
+        mConverter.setFrame(progress / 200.0);
     }
 
     private void updateNotificationPlayer() {

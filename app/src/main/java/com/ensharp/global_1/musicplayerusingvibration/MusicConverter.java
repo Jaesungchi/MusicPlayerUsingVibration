@@ -21,6 +21,7 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
 
     // 한 프레임 당 sample 수
     private int blockSize = 0;
+    private int frameCount = 0;
     // FFT 처리 객체
     private RealDoubleFFT transformer;
     // 재생 중인 프레임
@@ -89,6 +90,7 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
 
         Log.e("conv", "변환 중...");
         mLoader.Open(path);
+        frameCount = mLoader.musicbuffers.length;
         blockSize = mLoader.musicbuffers[0].length;
         transformer = new RealDoubleFFT(blockSize);
         normalized = new double[blockSize];
@@ -101,6 +103,10 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
 
     public boolean isConverting() {
         return converting;
+    }
+
+    public double getCurrentProgressRate() {
+        return (double)frame / frameCount;
     }
 
     @Override
@@ -143,7 +149,7 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
 
     // 현재 진행하고 있는 프레임을 이동한다.
     public void setFrame(double playRate) {
-        frame = (int)(blockSize * playRate);
+        frame = (int)(frameCount * playRate);
     }
 
     public double[] normalization(short[] buffer) {

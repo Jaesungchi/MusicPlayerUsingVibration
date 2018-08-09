@@ -68,6 +68,7 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
 
             Log.e("music", "onServiceConnected - set");
             setMusicContents(list.get(position));
+
             progressUpdate = new ProgressUpdate();
             progressUpdate.start();
         }
@@ -116,21 +117,19 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-                mediaPlayer.pause();
                 serviceIntent.putExtra("PlayerButton",PlayerService.PAUSE_BUTTON);
+                startService(serviceIntent);
             }
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 mediaPlayer.seekTo(seekBar.getProgress());
-                if(seekBar.getProgress()>0 && play.getVisibility()== View.GONE){
-                    mediaPlayer.start();
-                }
+
                 // 음악 프레임 위치 이동
-                double playRate = (double)mediaPlayer.getCurrentPosition() / mediaPlayer.getDuration();
-                // 컨버터 프레임 지정해주는 부분 아직 구현X
-                //mMusicConverter.setFrame(playRate);
+                mService.setFrame(seekBar.getProgress());
+
                 serviceIntent.putExtra("PlayerButton",PlayerService.PLAY_BUTTON);
+                startService(serviceIntent);
             }
         });
 
@@ -192,7 +191,7 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
 
             title.setText(musicDto.getTitle());
             singer.setText(musicDto.getArtist());
-            seekBar.setMax(mediaPlayer.getDuration());
+            seekBar.setMax(200);
 
             // byte 배열로 압축된 비트맵 이미지를 다시 변환함
             byte[] albumBytes = new MyAdapter().getAlbumImage(getApplication(), Integer.parseInt(musicDto.getAlbumId()), 170);
@@ -273,12 +272,11 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
     class ProgressUpdate extends Thread{
         @Override
         public void run() {
-            while(mService.isPlaying()){
+            while(mBound && mService != null){
                 try {
                     Thread.sleep(500);
-                    if(mediaPlayer!=null){
-                        seekBar.setProgress(mediaPlayer.getCurrentPosition());
-                    }
+                    if(mService!=null)
+                        seekBar.setProgress(mService.getCurrentProgress());
                 } catch (Exception e) {
                     Log.e("ProgressUpdate",e.getMessage());
                 }
