@@ -101,6 +101,7 @@ public class PlayerService extends Service {
             Log.e("service", "position");
             int position = bundle.getInt("position");
             currentMusicPosition = position;
+            updateNotificationPlayer();
             updateCurrentMusicFile();
             mConverter.setMusicPath(mMusicList.get(position).getFilePath());
         }
@@ -112,9 +113,11 @@ public class PlayerService extends Service {
             switch (button) {
                 case PLAY_BUTTON:
                     mConverter.play();
+                    updateNotificationPlayer();
                     break;
                 case PAUSE_BUTTON:
                     mConverter.pause();
+                    updateNotificationPlayer();
                     break;
                 case PREVIOUS_BUTTON:
                     setPreviousMusic();
@@ -123,7 +126,7 @@ public class PlayerService extends Service {
                     setNextMusic();
                     break;
             }
-            updateNotificationPlayer();
+
         }
 
         // notification bar controller 에서 버튼을 눌렀을 때
@@ -169,6 +172,7 @@ public class PlayerService extends Service {
         if(currentMusicPosition < 0)
             currentMusicPosition = mMusicList.size() - 1;
         mConverter.setMusicPath(mMusicList.get(currentMusicPosition).getFilePath());
+        updateNotificationPlayer();
     }
 
     public void setNextMusic() {
@@ -176,6 +180,7 @@ public class PlayerService extends Service {
         if(currentMusicPosition >= mMusicList.size())
             currentMusicPosition = 0;
         mConverter.setMusicPath(mMusicList.get(currentMusicPosition).getFilePath());
+        updateNotificationPlayer();
     }
 
     public int getCurrentMusicPosition() {

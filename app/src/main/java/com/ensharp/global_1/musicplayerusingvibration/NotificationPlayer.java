@@ -1,6 +1,7 @@
 package com.ensharp.global_1.musicplayerusingvibration;
 
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ContentResolver;
@@ -11,6 +12,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.provider.ContactsContract;
 import android.support.v4.app.NotificationCompat;
@@ -30,6 +32,7 @@ public class NotificationPlayer {
     private NotificationManager mNotificationManager;
     private NotificationManagerBuilder mNotificationManagerBuilder;
     private boolean isForeground;
+    private NotificationChannel mChannel;
 
     public NotificationPlayer(PlayerService service) {
         mService = service;
@@ -57,6 +60,18 @@ public class NotificationPlayer {
         }
     }
 
+    public void createChannel() {
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            mChannel = new NotificationChannel(String.valueOf(NOTIFICATION_PLAYER_ID), "waver", NotificationManager.IMPORTANCE_DEFAULT);
+            mChannel.setDescription("waver notification bar");
+            mChannel.enableLights(false);
+            mChannel.enableVibration(false);
+            mChannel.setVibrationPattern(new long[]{0});
+            mChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+            mNotificationManager.createNotificationChannel(mChannel);
+        }
+    }
+
     private class NotificationManagerBuilder extends AsyncTask<Void, Void, Notification> {
         private RemoteViews mRemoteViews;
         private NotificationCompat.Builder mNotificationBuilder;
@@ -65,13 +80,15 @@ public class NotificationPlayer {
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
+            createChannel();
             Intent mainActivity = new Intent(mService, MainActivity.class);
             mMainPendingIntent = PendingIntent.getActivity(mService, 0, mainActivity, 0);
             mRemoteViews = createRemoteView(R.layout.activity_notification_player);
             mNotificationBuilder = new NotificationCompat.Builder(mService);
-            mNotificationBuilder.setSmallIcon(R.mipmap.ic_launcher)
+            mNotificationBuilder.setSmallIcon(R.drawable.wave)
                     .setOngoing(true)
                     .setContentIntent(mMainPendingIntent)
+                    .setChannelId(String.valueOf(NOTIFICATION_PLAYER_ID))
                     .setContent(mRemoteViews);
 
             Notification notification = mNotificationBuilder.build();
