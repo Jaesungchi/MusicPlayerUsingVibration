@@ -6,9 +6,9 @@ import android.media.AudioTrack;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import com.ensharp.global_1.musicplayerusingvibration.BandPassFilter.AudioEvent;
-import com.ensharp.global_1.musicplayerusingvibration.BandPassFilter.TarsosDSPAudioFloatConverter;
-import com.ensharp.global_1.musicplayerusingvibration.BandPassFilter.TarsosDSPAudioFormat;
+import com.ensharp.global_1.BandPassFilter.AudioEvent;
+import com.ensharp.global_1.BandPassFilter.TarsosDSPAudioFloatConverter;
+import com.ensharp.global_1.BandPassFilter.TarsosDSPAudioFormat;
 
 import java.io.Serializable;
 

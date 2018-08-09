@@ -39,7 +39,7 @@
  *   License along with this program; if not, write to the Free Software
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-package com.ensharp.global_1.musicplayerusingvibration.BandPassFilter;
+package com.ensharp.global_1.BandPassFilter;
 
 /**
  * A band pass filter is a filter that filters out all frequencies except for

@@ -3,9 +3,9 @@
 // (powered by Fernflower decompiler)
 //
 
-package com.ensharp.global_1.musicplayerusingvibration.BandPassFilter;
+package com.ensharp.global_1.BandPassFilter;
 
-import com.ensharp.global_1.musicplayerusingvibration.BandPassFilter.TarsosDSPAudioFormat.Encoding;
+import com.ensharp.global_1.BandPassFilter.TarsosDSPAudioFormat.Encoding;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

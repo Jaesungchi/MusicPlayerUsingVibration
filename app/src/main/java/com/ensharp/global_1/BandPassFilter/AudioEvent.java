@@ -22,7 +22,7 @@
 */
 
 
-package com.ensharp.global_1.musicplayerusingvibration.BandPassFilter;
+package com.ensharp.global_1.BandPassFilter;
 import java.util.Arrays;
 
 /**

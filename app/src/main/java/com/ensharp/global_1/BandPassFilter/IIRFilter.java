@@ -40,7 +40,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-package com.ensharp.global_1.musicplayerusingvibration.BandPassFilter;
+package com.ensharp.global_1.BandPassFilter;
 
 /**
  * An Infinite Impulse Response, or IIR, filter is a filter that uses a set of

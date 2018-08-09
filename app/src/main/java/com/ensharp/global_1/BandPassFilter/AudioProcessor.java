@@ -20,7 +20,7 @@
 *  for credits and info, see README.
 *
 */
-package com.ensharp.global_1.musicplayerusingvibration.BandPassFilter;
+package com.ensharp.global_1.BandPassFilter;
 
 /**
  * <p>
