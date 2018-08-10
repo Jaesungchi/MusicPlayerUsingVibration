@@ -10,7 +10,6 @@ import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -38,7 +37,6 @@ import java.util.ArrayList;
 
 public class MusicActivity extends AppCompatActivity implements View.OnClickListener, PopupMenu.OnMenuItemClickListener {
     private ArrayList<MusicVO> list;
-    private MediaPlayer mediaPlayer;
     private LinearLayout topLayout;
     private TextView title;
     private TextView singer;
@@ -83,9 +81,6 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_music);
 
-        // mediaPlayer 설정
-        mediaPlayer = new MediaPlayer();
-
         // UI적인 요소들 설정
         title = (TextView)findViewById(R.id.title);
         singer = (TextView)findViewById(R.id.singer);
@@ -123,25 +118,14 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                mediaPlayer.seekTo(seekBar.getProgress());
-
                 // 음악 프레임 위치 이동
-                mService.setFrame(seekBar.getProgress());
-
-                serviceIntent.putExtra("PlayerButton",PlayerService.PLAY_BUTTON);
+                if (seekBar.getProgress() >= 200) {
+                    seekBar.setProgress(199);
+                    mService.setFrame(199);
+                } else
+                    mService.setFrame(seekBar.getProgress());
+                serviceIntent.putExtra("PlayerButton", PlayerService.PLAY_BUTTON);
                 startService(serviceIntent);
-            }
-        });
-
-        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-            @Override
-            public void onCompletion(MediaPlayer mp) {
-                if(position+1<list.size()) {
-                    position++;
-                    /*
-                    Log.e("music", "setMusicContents - set");
-                    setMusicContents(list.get(position));*/
-                }
             }
         });
     }
@@ -191,7 +175,7 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
 
             title.setText(musicDto.getTitle());
             singer.setText(musicDto.getArtist());
-            seekBar.setMax(200);
+            seekBar.setMax(210);
 
             // byte 배열로 압축된 비트맵 이미지를 다시 변환함
             byte[] albumBytes = new MyAdapter().getAlbumImage(getApplication(), Integer.parseInt(musicDto.getAlbumId()), 170);
@@ -259,12 +243,12 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
             case R.id.pre:
                 serviceIntent.putExtra("PlayerButton",PlayerService.PREVIOUS_BUTTON);
                 startService(serviceIntent);
-                setMusicContents(mService.getCurrentMusicVO());
+                setMusicContents(mService.getCurrentMusicVO(PlayerService.PREVIOUS_BUTTON));
                 break;
             case R.id.next:
                 serviceIntent.putExtra("PlayerButton",PlayerService.NEXT_BUTTON);
                 startService(serviceIntent);
-                setMusicContents(mService.getCurrentMusicVO());
+                setMusicContents(mService.getCurrentMusicVO(PlayerService.NEXT_BUTTON));
                 break;
         }
     }
@@ -274,6 +258,12 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         public void run() {
             while(mBound && mService != null){
                 try {
+                    // 노래가 다 끝나면 다음 곡 재생
+                    if(mService.isCompletePlay()) {
+                        serviceIntent.putExtra("PlayerButton", PlayerService.NEXT_BUTTON);
+                        startService(serviceIntent);
+                        setMusicContents(mService.getCurrentMusicVO(PlayerService.NEXT_BUTTON));
+                    }
                     Thread.sleep(500);
                     if(mService!=null)
                         seekBar.setProgress(mService.getCurrentProgress());
@@ -288,9 +278,5 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
     protected void onDestroy() {
         super.onDestroy();
         unbindService(mConnection);
-        if(mediaPlayer!=null){
-            mediaPlayer.release();
-            mediaPlayer = null;
-        }
     }
 }

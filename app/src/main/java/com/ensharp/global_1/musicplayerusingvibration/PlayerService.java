@@ -201,8 +201,20 @@ public class PlayerService extends Service {
         return mConverter.isPlaying();
     }
 
-    public MusicVO getCurrentMusicVO() {
-        return mMusicList.get(currentMusicPosition);
+    // 음악을 변경하기 전 호출되는 함수이며, 그 뒤 서비스에서 Position이 변경된다.
+    public MusicVO getCurrentMusicVO(int pressedButton) {
+        if(pressedButton == PlayerService.NEXT_BUTTON) {
+            if (mMusicList.size() <= currentMusicPosition + 1)
+                return mMusicList.get(0);
+            return mMusicList.get(currentMusicPosition + 1);
+        }
+        else if(pressedButton == PlayerService.PREVIOUS_BUTTON) {
+            if (currentMusicPosition - 1 < 0)
+                return mMusicList.get(mMusicList.size() - 1);
+            return mMusicList.get(currentMusicPosition - 1);
+        }
+        else
+            return mMusicList.get(currentMusicPosition);
     }
 
     public int getCurrentProgress() {

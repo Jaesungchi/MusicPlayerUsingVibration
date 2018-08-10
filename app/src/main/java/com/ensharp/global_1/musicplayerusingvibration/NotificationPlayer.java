@@ -146,7 +146,7 @@ public class NotificationPlayer {
                 remoteViews.setImageViewResource(R.id.btn_play_pause, R.drawable.play);
             }
 
-            MusicVO currentMusic = mService.getCurrentMusicVO();
+            MusicVO currentMusic = mService.getCurrentMusicVO(-1);
 
             String title = currentMusic.getTitle();
             remoteViews.setTextViewText(R.id.txt_title, title);
