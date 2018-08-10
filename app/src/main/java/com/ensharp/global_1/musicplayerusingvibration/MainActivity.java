@@ -11,6 +11,7 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -24,6 +25,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -47,6 +49,7 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
     private Intent musicIntent;
 
     // 현재 재생 중인 노래
+    private LinearLayout musicBar;
     private TextView title;
     private TextView singer;
     private ImageView album, previous, play, pause, next;
@@ -103,19 +106,22 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
             title = (TextView)findViewById(R.id.currentMusicTitle);
             singer = (TextView)findViewById(R.id.currentMusicSinger);
             album = (ImageView)findViewById(R.id.currentMusicAlbum);
+            musicBar = (LinearLayout)findViewById(R.id.currentMusicBar);
 
             previous = (ImageView)findViewById(R.id.currentMusicPrevious);
             next = (ImageView)findViewById(R.id.currentMusicNext);
             play = (ImageView)findViewById(R.id.currentMusicPlay);
             pause = (ImageView)findViewById(R.id.currentMusicPause);
 
+            pause.setVisibility(View.VISIBLE);
+            play.setVisibility(View.GONE);
+
             previous.setOnClickListener(this);
             next.setOnClickListener(this);
             play.setOnClickListener(this);
             pause.setOnClickListener(this);
-
-            pause.setVisibility(View.GONE);
-            play.setVisibility(View.VISIBLE);
+            album.setOnClickListener(this);
+            musicBar.setOnClickListener(this);
 
             // 음악리스트에 있는 각 음악들 클릭 이벤트
             listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -128,9 +134,10 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
                         serviceIntent.putExtra("position", position);
 
                         // preferences 파일 업데이트 후 하단바 업데이트
-                        updateCurrentMusicFile(list, position);
-                        updateCurrentMusicPlayerBar();
-
+                        if(!PlayerService.PLAY_STATE) {
+                            updateCurrentMusicFile(list, position);
+                            updateCurrentMusicPlayerBar();
+                        }
                         startService(serviceIntent);
                         startActivity(musicIntent);
                     }
@@ -145,7 +152,9 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
     @Override
     protected void onStart(){
         super.onStart();
-        Log.e("yeongjoon", "Main-onStart");
+        if(PlayerService.PLAY_STATE) {
+            // 서비스 실행 중일 때
+        }
     }
 
     @Override
@@ -238,9 +247,7 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
             Log.e("preferences","not null, update complete");
         }
         else
-        {
             Log.e("preferences","null");
-        }
     }
 
     // preferences 파일 업데이트
@@ -457,19 +464,30 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
                 pause.setVisibility(View.VISIBLE);
                 play.setVisibility(View.GONE);
                 serviceIntent.putExtra("PlayerButton",PlayerService.PLAY_BUTTON);
+                startService(serviceIntent);
                 break;
             case R.id.currentMusicPause:
                 pause.setVisibility(View.GONE);
                 play.setVisibility(View.VISIBLE);
                 serviceIntent.putExtra("PlayerButton",PlayerService.PAUSE_BUTTON);
+                startService(serviceIntent);
                 break;
             case R.id.currentMusicPrevious:
                 serviceIntent.putExtra("PlayerButton",PlayerService.PREVIOUS_BUTTON);
+                startService(serviceIntent);
+                updateCurrentMusicFile(list, PlayerService.currentMusicPosition);
+                updateCurrentMusicPlayerBar();
                 break;
             case R.id.currentMusicNext:
                 serviceIntent.putExtra("PlayerButton",PlayerService.NEXT_BUTTON);
+                startService(serviceIntent);
+                updateCurrentMusicFile(list, PlayerService.currentMusicPosition);
+                updateCurrentMusicPlayerBar();
+                break;
+            case R.id.currentMusicAlbum:
+            case R.id.currentMusicBar:
+                startActivity(musicIntent);
                 break;
         }
-        startService(serviceIntent);
     }
 }

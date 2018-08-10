@@ -21,7 +21,7 @@ public class PlayerService extends Service {
 
     private MusicConverter mConverter;
     private ArrayList<MusicVO> mMusicList;
-    private int currentMusicPosition;
+    static public int currentMusicPosition;
     private NotificationPlayer mNotificationPlayer;
 
     static final int PLAY_BUTTON = 0;
@@ -103,33 +103,38 @@ public class PlayerService extends Service {
             currentMusicPosition = position;
             updateNotificationPlayer();
             updateCurrentMusicFile();
+            PLAY_STATE = true;
             mConverter.setMusicPath(mMusicList.get(position).getFilePath());
         }
 
-        // MusicActivity에서 버튼을 눌렀다면
+        // MainActivity, MusicActivity에서 버튼을 눌렀다면
         if (bundle.containsKey("PlayerButton")) {
             int button = bundle.getInt("PlayerButton");
 
             switch (button) {
                 case PLAY_BUTTON:
                     mConverter.play();
+                    PLAY_STATE = true;
                     updateNotificationPlayer();
                     break;
                 case PAUSE_BUTTON:
                     mConverter.pause();
+                    //PLAY_STATE = false;
                     updateNotificationPlayer();
                     break;
                 case PREVIOUS_BUTTON:
                     setPreviousMusic();
+                    updateCurrentMusicFile();
                     break;
                 case NEXT_BUTTON:
                     setNextMusic();
+                    updateCurrentMusicFile();
                     break;
             }
         }
 
         // notification bar controller 에서 버튼을 눌렀을 때
-        if (action == null) {
+        if (action != null) {
             if (CommandActions.TOGGLE_PLAY.equals(action)) {
                 if (isPlaying())
                     mConverter.pause();
