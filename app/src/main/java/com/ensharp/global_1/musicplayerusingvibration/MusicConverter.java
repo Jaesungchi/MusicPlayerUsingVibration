@@ -192,7 +192,7 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
                     max = frequencies[freq];
             }
 
-            max *= 5.0;
+            max *= 50.0;
             temp = (int)(max) + "";
 
             if(temp.length() == 1)

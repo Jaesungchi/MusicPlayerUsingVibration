@@ -229,7 +229,7 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
     // 하단바 업데이트
     private void updateCurrentMusicPlayerBar(){
         // 현재 재생 중인 음악이 있으면
-        if(preferences != null && preferences.getString("currentMusicAlbum","") != ""){
+        if(preferences != null && preferences.getString("currentMusicAlbum","") != null){
             // 노래 제목, 가수명 값 불러오기
             title.setText(preferences.getString("currentMusicTitle",""));
             singer.setText(preferences.getString("currentMusicSinger",""));
@@ -241,6 +241,8 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
             byte[] albumBytes = new MyAdapter().getAlbumImage(getApplication(),
                     Integer.parseInt(preferences.getString("currentMusicAlbum","")),
                     170);
+            if(albumBytes == null)
+                return;
             Bitmap bitmap = BitmapFactory.decodeByteArray(albumBytes, 0, albumBytes.length);
             album.setImageBitmap(bitmap);
 
