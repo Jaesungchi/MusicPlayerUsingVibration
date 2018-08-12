@@ -13,6 +13,7 @@ import com.ensharp.global_1.BandPassFilter.TarsosDSPAudioFormat;
 import java.io.Serializable;
 
 import ca.uol.aig.fftpack.RealDoubleFFT;
+import com.ensharp.global_1.melody_extraction.*;
 
 public class MusicConverter extends AsyncTask<Void, double[], Void> implements Serializable {
     private SamplesLoader mLoader;
@@ -27,6 +28,10 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
     private int frame;
     // 현재 필터
     private int filter;
+    // STFT 객체
+    private STFT stft;
+    // AnalyzerParameters
+    private AnalyzerParameters analyzerParameters;
 
     private double[] normalized;
     private boolean pausing;
@@ -60,6 +65,7 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
         audioEvent = new AudioEvent(new TarsosDSPAudioFormat(TarsosDSPAudioFloatConverter.PCM_FLOAT, 44100, 256, AudioFormat.CHANNEL_IN_STEREO, blockSize, 40, true));
 
         pService = mService;
+        analyzerParameters = new AnalyzerParameters();
     }
 
     public void pause() {
@@ -112,13 +118,33 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
             // 현재 frame의 sample 값들을 저장
             buffer = mLoader.musicbuffers[frame++];
 
+
             // FFT를 처리하기 전에 0~1 사이 값으로 정규화
             toTransform = normalization(buffer);
-            transformer.ft(toTransform);
 
-            pService.sendData(makeSignal(toTransform));
+            Log.e("toTransform length", toTransform.length+"");
 
-            Log.e("conv", makeSignal(toTransform));
+            //transformer.ft(toTransform);
+
+            //stft
+            analyzerParameters.micGainDB = toTransform;
+            stft = new STFT(analyzerParameters);
+            stft.setAWeighting(analyzerParameters.isAWeighting);
+            stft.feedData(buffer,buffer.length);
+
+            double[] spectrumDB = null;
+            if(stft.nElemSpectrumAmp() >= analyzerParameters.nFFTAverage){
+                spectrumDB = stft.getSpectrumAmpDB();
+
+                stft.calculatePeak();
+            }
+            Log.e("stft","success stft!");
+
+
+            Log.e("spectrum length", spectrumDB.length +"");
+            pService.sendData(makeSignal(spectrumDB));
+
+            Log.e("conv", makeSignal(spectrumDB));
 
             audioTrack.write(buffer, 0, buffer.length);
             audioTrack.play();

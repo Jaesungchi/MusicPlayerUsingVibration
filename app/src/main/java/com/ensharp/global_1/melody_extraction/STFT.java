@@ -33,7 +33,7 @@ import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
 // Short Time Fourier Transform
-class STFT {
+public class STFT {
     // data for frequency Analysis
     private double[] spectrumAmpOutCum;
     private double[] spectrumAmpOutTmp;
@@ -47,7 +47,7 @@ class STFT {
     private int fftLen;
     private int hopLen;                           // control overlap of FFTs = (1 - lopLen/fftLen)*100%
     private int spectrumAmpPt;
-//    private double[][] spectrumAmpOutArray;
+    //    private double[][] spectrumAmpOutArray;
 //    private int spectrumAmpOutArrayPt = 0;        // Pointer for spectrumAmpOutArray
     private int nAnalysed = 0;
     private RealDoubleFFT spectrumAmpFFT;
@@ -60,7 +60,7 @@ class STFT {
     private double[] micGain;
 
     private double sqr(double x) { return x*x; }
-  
+
     // Generate multiplier for A-weighting
     private void initDBAFactor(int fftlen, double sampleRate) {
         dBAFactor = new double[fftlen/2+1];
@@ -202,7 +202,7 @@ class STFT {
         wndEnergyFactor = wnd.length / wndEnergyFactor;
     }
 
-    void setAWeighting(boolean e_isAWeighting) {
+    public void setAWeighting(boolean e_isAWeighting) {
         boolAWeighting = e_isAWeighting;
     }
 
@@ -239,7 +239,7 @@ class STFT {
         boolAWeighting = false;
     }
 
-    STFT(AnalyzerParameters analyzerParam) {
+    public STFT(AnalyzerParameters analyzerParam) {
         init(analyzerParam.fftLen, analyzerParam.hopLen, analyzerParam.sampleRate, analyzerParam.nFFTAverage, analyzerParam.wndFuncName);
         if (analyzerParam.micGainDB != null) {
             if (micGain == null || micGain.length != analyzerParam.micGainDB.length) {
@@ -254,11 +254,11 @@ class STFT {
         }
     }
 
-    public void feedData(short[] ds) {
-      feedData(ds, ds.length);
+    void feedData(short[] ds) {
+        feedData(ds, ds.length);
     }
 
-    void feedData(short[] ds, int dsLen) {
+    public void feedData(short[] ds, int dsLen) {
         if (dsLen > ds.length) {
             Log.e("STFT", "dsLen > ds.length !");
             dsLen = ds.length;
@@ -312,7 +312,7 @@ class STFT {
         dataOut[j] = data[data.length-1]*data[data.length-1] * scaler / 4.0;
     }
 
-    final double[] getSpectrumAmp() {
+    public final double[] getSpectrumAmp() {
         if (nAnalysed != 0) {    // no new result
             int outLen = spectrumAmpOut.length;
             double[] sAOC = spectrumAmpOutCum;
@@ -341,7 +341,7 @@ class STFT {
         return spectrumAmpOut;
     }
 
-    final double[] getSpectrumAmpDB() {
+    public final double[] getSpectrumAmpDB() {
         getSpectrumAmp();
         return spectrumAmpOutDB;
     }
@@ -364,13 +364,13 @@ class STFT {
         return sqrt(s * wndEnergyFactor);
     }
 
-    int nElemSpectrumAmp() {
-      return nAnalysed;
+    public int nElemSpectrumAmp() {
+        return nAnalysed;
     }
 
     double maxAmpFreq = Double.NaN, maxAmpDB = Double.NaN;
 
-    void calculatePeak() {
+    public void calculatePeak() {
         getSpectrumAmpDB();
         // Find and show peak amplitude
         maxAmpDB  = 20 * log10(0.125/32768);

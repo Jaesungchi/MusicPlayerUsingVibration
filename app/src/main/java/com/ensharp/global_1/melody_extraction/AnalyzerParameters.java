@@ -25,18 +25,18 @@ import com.ensharp.global_1.musicplayerusingvibration.R;
  * Basic properties of Analyzer.
  */
 
-class AnalyzerParameters {
+public class AnalyzerParameters {
     int sampleRate = 44100;
-    int fftLen = 512;
-    int hopLen = 1024;
+    int fftLen = 8192;
+    int hopLen = 4096;
     double overlapPercent = 50;  // = (1 - hopLen/fftLen) * 100%
-    String wndFuncName;
-    int nFFTAverage = 2;
-    boolean isAWeighting = false;
+    String wndFuncName = "Blackman";
+    public int nFFTAverage = 2;
+    public boolean isAWeighting = false;
     final int BYTE_OF_SAMPLE = 2;
     final double SAMPLE_VALUE_MAX = 32767.0;   // Maximum signal value
     double spectrogramDuration = 4.0;
 
-    double[] micGainDB = null;  // should have fftLen/2+1 elements, i.e. include DC.
+    public double[] micGainDB;  // should have fftLen/2+1 elements, i.e. include DC.
     String calibName = null;
 }
