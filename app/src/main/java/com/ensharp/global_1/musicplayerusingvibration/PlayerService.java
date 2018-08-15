@@ -69,12 +69,18 @@ public class PlayerService extends Service {
     public void onCreate() {
         super.onCreate();
 
+        audioManager = (AudioManager)getSystemService(AUDIO_SERVICE);
         mConverter = new MusicConverter(this);
+        mConverter.setVolume(audioManager.getStreamVolume(AudioManager.STREAM_MUSIC));
         mConverter.execute();
         mMusicList = null;
         mNotificationPlayer = new NotificationPlayer(this);
         mConverter.setFilter(MusicConverter.DELICACY);
         preferences = getSharedPreferences("preferences", MODE_PRIVATE);
+    }
+
+    public int getCurrentVolume() {
+        return audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
     }
 
     @Override

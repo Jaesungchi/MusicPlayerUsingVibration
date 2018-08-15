@@ -34,6 +34,8 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
     private int frame;
     // 현재 필터
     private int filter;
+    // 미디어 볼륨
+    private int volume;
 
     private boolean pausing;
     private boolean destorying = false;
@@ -80,7 +82,9 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
         PlayerService.PLAY_STATE = true;
     }
 
-
+    public void setVolume(int volume) {
+        this.volume = volume;
+    }
 
     public boolean isPlaying() {
         return !pausing;
@@ -169,6 +173,8 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
             // 정지 상태
             while(pausing);
 
+            volume = pService.getCurrentVolume();
+
             // 현재 frame의 sample 값들을 저장
             buffer = mLoader.musicbuffers[frame++];
 
@@ -226,7 +232,7 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
                     max = frequencies[freq];
             }
 
-            max *= 5.0;
+            max *= volume;
             temp = (int)max + "";
 
             if(temp.length() == 1)
