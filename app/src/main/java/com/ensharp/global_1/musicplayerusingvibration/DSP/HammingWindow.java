@@ -1,4 +1,4 @@
-package com.ensharp.global_1.musicplayerusingvibration;
+package com.ensharp.global_1.musicplayerusingvibration.DSP;
 
 public class HammingWindow {
     protected static final float TWO_PI = (float) (2 * Math.PI);

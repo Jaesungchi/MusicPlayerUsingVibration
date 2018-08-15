@@ -130,7 +130,7 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
                     // 음악 클릭 시 서비스에 position, list, musicConverter 전달
                     Log.e("music", position + "");
                     Log.e("jae", btConnector.checkOnline + "");
-                    if(btConnector.checkOnline) {
+                    //if(btConnector.checkOnline) {
                         serviceIntent.putExtra("position", position);
 
                         // preferences 파일 업데이트 후 하단바 업데이트
@@ -140,10 +140,10 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
                         }
                         startService(serviceIntent);
                         startActivity(musicIntent);
-                    }
-                    else {
-                        btConnector.enableBluetooth();
-                    }
+                   // }
+                    //else {
+                    //    btConnector.enableBluetooth();
+                   // }
                 }
             });
         }
@@ -229,7 +229,7 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
     // 하단바 업데이트
     private void updateCurrentMusicPlayerBar(){
         // 현재 재생 중인 음악이 있으면
-        if(preferences != null && preferences.getString("currentMusicAlbum","") != null){
+        if(preferences != null && preferences.getString("currentMusicAlbum","") != ""){
             // 노래 제목, 가수명 값 불러오기
             title.setText(preferences.getString("currentMusicTitle",""));
             singer.setText(preferences.getString("currentMusicSinger",""));

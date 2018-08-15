@@ -5,10 +5,12 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.media.AudioManager;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.KeyEvent;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,6 +25,7 @@ public class PlayerService extends Service {
     private ArrayList<MusicVO> mMusicList;
     static public int currentMusicPosition;
     private NotificationPlayer mNotificationPlayer;
+    private AudioManager audioManager;
 
     static final int PLAY_BUTTON = 0;
     static final int PAUSE_BUTTON = 1;

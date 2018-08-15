@@ -3,7 +3,7 @@
 // (powered by Fernflower decompiler)
 //
 
-package com.ensharp.global_1.musicplayerusingvibration.BandPassFilter;
+package com.ensharp.global_1.musicplayerusingvibration.DSP;
 
 import java.util.Collections;
 import java.util.HashMap;

@@ -6,9 +6,12 @@ import android.media.AudioTrack;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import com.ensharp.global_1.musicplayerusingvibration.BandPassFilter.AudioEvent;
-import com.ensharp.global_1.musicplayerusingvibration.BandPassFilter.TarsosDSPAudioFloatConverter;
-import com.ensharp.global_1.musicplayerusingvibration.BandPassFilter.TarsosDSPAudioFormat;
+import com.ensharp.global_1.musicplayerusingvibration.DSP.AudioEvent;
+import com.ensharp.global_1.musicplayerusingvibration.DSP.BandPass;
+import com.ensharp.global_1.musicplayerusingvibration.DSP.HammingWindow;
+import com.ensharp.global_1.musicplayerusingvibration.DSP.PercussionOnsetDetector;
+import com.ensharp.global_1.musicplayerusingvibration.DSP.TarsosDSPAudioFloatConverter;
+import com.ensharp.global_1.musicplayerusingvibration.DSP.TarsosDSPAudioFormat;
 
 import java.io.Serializable;
 
@@ -18,6 +21,9 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
     private SamplesLoader mLoader;
     private AudioEvent audioEvent;
     private HammingWindow hammingWindow;
+    private PercussionOnsetDetector percussionDetector;
+    private BandPass bandPass;
+    private AudioManager audioManager;
 
     // 한 프레임 당 sample 수
     private int blockSize = 0;
@@ -29,7 +35,6 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
     // 현재 필터
     private int filter;
 
-    private double[] normalized;
     private boolean pausing;
     private boolean destorying = false;
     // 노래 완료 상태
@@ -48,6 +53,7 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
 
     // 기준 주파수
     final int[] standardFrequencies = new int[]{63,125,250,500,1000,2000};
+    final int SAMPLE_RATE = 44100;
 
     public MusicConverter(PlayerService mService) {
         super();
@@ -58,7 +64,8 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
 
         minSize = AudioTrack.getMinBufferSize(44100, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT);
         audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, 44100, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT, minSize, AudioTrack.MODE_STREAM);
-        audioEvent = new AudioEvent(new TarsosDSPAudioFormat(TarsosDSPAudioFloatConverter.PCM_FLOAT, 44100, 256, AudioFormat.CHANNEL_IN_STEREO, blockSize, 40, true));
+        audioEvent = new AudioEvent(new TarsosDSPAudioFormat(TarsosDSPAudioFloatConverter.PCM_FLOAT, SAMPLE_RATE, 256, AudioFormat.CHANNEL_IN_STEREO, blockSize, 40, true));
+        bandPass = new BandPass(SAMPLE_RATE);
 
         pService = mService;
     }
@@ -72,6 +79,8 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
         pausing = false;
         PlayerService.PLAY_STATE = true;
     }
+
+
 
     public boolean isPlaying() {
         return !pausing;
@@ -88,14 +97,13 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
         frame = 0;
         converting = true;
 
-        Log.e("conv", "변환 중...");
+        Log.i("conv", "변환 중...");
         mLoader.Open(path);
         frameCount = mLoader.musicbuffers.length;
         blockSize = mLoader.musicbuffers[0].length;
-        transformer = new RealDoubleFFT(blockSize);
-        normalized = new double[blockSize];
-        Log.e("conv", "변환 완료");
-
+        //transformer = new RealDoubleFFT(blockSize);
+        percussionDetector = new PercussionOnsetDetector(SAMPLE_RATE, blockSize);
+        Log.i("conv", "변환 완료");
         pausing = false;
         converting = false;
         PlayerService.PLAY_STATE = true;
@@ -109,10 +117,53 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
         return (double)frame / frameCount;
     }
 
+    public float[] convertToFloatArray(double[] array) {
+        float[] result = new float[array.length];
+        for(int i=0; i<array.length; i++)
+            result[i] = (float)array[i];
+        return result;
+    }
+
+    private float[] normalizationToFloat(short[] buffer) {
+        float[] result = new float[buffer.length];
+        for (int i = 0; i < buffer.length; i++)
+            result[i] = (float) buffer[i] / Short.MAX_VALUE;
+        return result;
+    }
+
+    private float[] normalizationToFloat(short[] buffer, float[] weights) {
+        float[] result = new float[buffer.length];
+        for(int i = 0; i < buffer.length; i++)
+            result[i] = (buffer[i] / Short.MAX_VALUE) * weights[i];
+        return result;
+    }
+
+    private float[] filter(short[] buffer) {
+        float[] result = new float[buffer.length];
+
+        // HammingWindow 전처리 적용
+        if(filter == TOUGH)
+            result = normalizationToFloat(buffer, hammingWindow.generateCurve(buffer.length));
+
+        // Band-Pass Filter 전처리 적용
+        else if(filter == DELICACY) {
+            float[] buf = new float[buffer.length];
+
+            bandPass.setF1(100);
+            bandPass.setF2(20000);
+            bandPass.setBW(1);
+            buf = bandPass.filter(buf, normalizationToFloat(buffer), blockSize, 0);
+            audioEvent.setFloatBuffer(buf);
+            for(int i=0; i < blockSize; i++)
+                result[i] = buf[i] * (float) audioEvent.getRMS();
+        }
+        return result;
+    }
+
     @Override
     protected Void doInBackground(Void... voids) {
         short[] buffer;
-        double[] toTransform;
+        float[] processed;
 
         while(true) {
             // 정지 상태
@@ -121,13 +172,14 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
             // 현재 frame의 sample 값들을 저장
             buffer = mLoader.musicbuffers[frame++];
 
-            // FFT를 처리하기 전에 0~1 사이 값으로 정규화
-            toTransform = normalization(buffer);
-            transformer.ft(toTransform);
+            // FFT를 처리하기 전에 0~1 사이 값으로 정규화하고 필터를 적용한다.
+            audioEvent.setFloatBuffer(filter(buffer));
+            processed = percussionDetector.process(audioEvent);
 
-            pService.sendData(makeSignal(toTransform));
+            String signal = makeSignal(processed);
+            pService.sendData(signal);
 
-            Log.e("conv", makeSignal(toTransform));
+            Log.e("conv", signal);
 
             audioTrack.write(buffer, 0, buffer.length);
             audioTrack.play();
@@ -152,26 +204,6 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
         frame = (int)(frameCount * playRate);
     }
 
-    public double[] normalization(short[] buffer) {
-        float[] buf;
-
-        if(filter == TOUGH) {
-            buf = hammingWindow.generateCurve(buffer.length);
-            for (int i = 0; i < blockSize; i++)
-                normalized[i] = ((double) buffer[i] / Short.MAX_VALUE) * buf[i]; // 부호 있는 16비트
-        }
-        else if(filter == DELICACY) {
-            buf = new float[buffer.length];
-            for(int i=0; i < blockSize; i++)
-                buf[i] = ((float)buffer[i] / Short.MAX_VALUE);
-            audioEvent.setFloatBuffer(buf);
-            for(int i=0; i < blockSize; i++)
-                normalized[i] = buf[i] * audioEvent.getRMS();
-        }
-
-        return normalized;
-    }
-
     public double[] copyArray(double[] array) {
         double[] copied = new double[array.length];
         for(int k=0; k<array.length; k++)
@@ -180,20 +212,22 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
     }
 
     // 하드웨어로 보낼 신호 문자열을 반환한다.
-    public String makeSignal(double[] frequencies) {
+    public String makeSignal(float[] frequencies) {
         String signal = "";
-        String temp = "";
+        String temp;
 
         for(int part = 0; part < 6; part++) {
             int gap = standardFrequencies[part] / 10;
             double max = 0.0;
             for(int freq = 9 * gap; freq < 11 * gap; freq++) {
+                if(frequencies.length <= freq)
+                    break;
                 if(max < frequencies[freq])
                     max = frequencies[freq];
             }
 
-            max *= 50.0;
-            temp = (int)(max) + "";
+            max *= 5.0;
+            temp = (int)max + "";
 
             if(temp.length() == 1)
                 temp = '0' + temp;
