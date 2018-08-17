@@ -128,9 +128,7 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                     // 음악 클릭 시 서비스에 position, list, musicConverter 전달
-                    Log.e("music", position + "");
-                    Log.e("jae", btConnector.checkOnline + "");
-                    //if(btConnector.checkOnline) {
+                    if(btConnector.checkOnline) {
                         serviceIntent.putExtra("position", position);
 
                         // preferences 파일 업데이트 후 하단바 업데이트
@@ -140,10 +138,10 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
                         }
                         startService(serviceIntent);
                         startActivity(musicIntent);
-                   // }
-                    //else {
-                    //    btConnector.enableBluetooth();
-                   // }
+                    }
+                    else {
+                        btConnector.enableBluetooth();
+                    }
                 }
             });
         }

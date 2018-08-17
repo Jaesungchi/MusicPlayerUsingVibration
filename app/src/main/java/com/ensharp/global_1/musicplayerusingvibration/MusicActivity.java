@@ -54,6 +54,7 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
     // Intent 선언
     private Intent serviceIntent;
     private PlayerService mService;
+    private MusicActivity musicActivity = this;
 
     private ServiceConnection mConnection = new ServiceConnection() {
         @Override
@@ -62,6 +63,9 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
             mService = binder.getService();
             mBound = true;
             isPlaying = true;
+
+            // 현재 뮤직 액티비티 변경
+            mService.changeMusicActivity(musicActivity);
 
             // 서비스에서 현재 음악파일 position 과 음악 리스트 가져오기
             position = mService.getCurrentMusicPosition();
@@ -251,6 +255,25 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         }
     }
 
+    public void syncWithNotification(int button) {
+        switch (button) {
+            case PlayerService.PAUSE_BUTTON:
+                pause.setVisibility(View.GONE);
+                play.setVisibility(View.VISIBLE);
+                break;
+            case PlayerService.PLAY_BUTTON:
+                pause.setVisibility(View.VISIBLE);
+                play.setVisibility(View.GONE);
+                break;
+            case PlayerService.PREVIOUS_BUTTON:
+                setMusicContents(mService.getCurrentMusicVO(PlayerService.PREVIOUS_BUTTON));
+                break;
+            case PlayerService.NEXT_BUTTON:
+                setMusicContents(mService.getCurrentMusicVO(PlayerService.NEXT_BUTTON));
+                break;
+        }
+    }
+
     class ProgressUpdate extends Thread{
         @Override
         public void run() {
@@ -270,6 +293,12 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
                 }
             }
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+        mService.changeMusicActivity(null);
+        finish();
     }
 
     @Override

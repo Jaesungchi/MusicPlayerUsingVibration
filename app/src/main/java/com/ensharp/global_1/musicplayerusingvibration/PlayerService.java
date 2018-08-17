@@ -26,6 +26,7 @@ public class PlayerService extends Service {
     static public int currentMusicPosition;
     private NotificationPlayer mNotificationPlayer;
     private AudioManager audioManager;
+    private MusicActivity currentMusicActivity = null;
 
     static final int PLAY_BUTTON = 0;
     static final int PAUSE_BUTTON = 1;
@@ -83,6 +84,12 @@ public class PlayerService extends Service {
         return audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
     }
 
+    public void changeMusicActivity(MusicActivity musicActivity) {
+        if(currentMusicActivity != null)
+            currentMusicActivity.finish();
+        currentMusicActivity = musicActivity;
+    }
+
     @Override
     public IBinder onBind(Intent intent) {
         return mBinder;
@@ -103,6 +110,43 @@ public class PlayerService extends Service {
                 connected(MainActivity.btConnector.mmSocket, MainActivity.btConnector.mmDevice);
                 bluetoothConnected = true;
             }
+        }
+
+        // notification bar controller 에서 버튼을 눌렀을 때
+        if (action != null) {
+            if (CommandActions.TOGGLE_PLAY.equals(action)) {
+                if (isPlaying()) {
+                    mConverter.pause();
+                    if(currentMusicActivity != null)
+                        currentMusicActivity.syncWithNotification(PAUSE_BUTTON);
+                }
+                else {
+                    mConverter.play();
+                    if(currentMusicActivity != null)
+                        currentMusicActivity.syncWithNotification(PLAY_BUTTON);
+                }
+            }
+            else if (CommandActions.REWIND.equals(action)) {
+                if(currentMusicActivity != null)
+                    currentMusicActivity.syncWithNotification(PREVIOUS_BUTTON);
+                setPreviousMusic();
+            }
+            else if (CommandActions.FORWARD.equals(action)) {
+                if(currentMusicActivity != null)
+                    currentMusicActivity.syncWithNotification(NEXT_BUTTON);
+                setNextMusic();
+            }
+
+            else if (CommandActions.CLOSE.equals(action)) {
+                mConverter.destroy();
+                removeNotificationPlayer();
+                return START_NOT_STICKY;
+            }
+
+            updateCurrentMusicFile();
+            updateNotificationPlayer();
+
+            return START_REDELIVER_INTENT;
         }
 
         // 리스트에서 누른 노래를 재생
@@ -140,24 +184,6 @@ public class PlayerService extends Service {
                     updateCurrentMusicFile();
                     break;
             }
-        }
-
-        // notification bar controller 에서 버튼을 눌렀을 때
-        if (action != null) {
-            if (CommandActions.TOGGLE_PLAY.equals(action)) {
-                if (isPlaying())
-                    mConverter.pause();
-                else
-                    mConverter.play();
-            } else if (CommandActions.REWIND.equals(action))
-                setPreviousMusic();
-            else if (CommandActions.FORWARD.equals(action))
-                setNextMusic();
-            else if (CommandActions.CLOSE.equals(action)) {
-                mConverter.destroy();
-                removeNotificationPlayer();
-            }
-            updateCurrentMusicFile();
         }
 
         return START_REDELIVER_INTENT;
@@ -240,11 +266,13 @@ public class PlayerService extends Service {
     }
 
     private void updateNotificationPlayer() {
+        Log.i("notification", "service - updateNotificationPlayer");
         if(mNotificationPlayer != null)
             mNotificationPlayer.updateNotificationPlayer();
     }
 
     private void removeNotificationPlayer() {
+        Log.i("notification", "service - removeNotificationPlayer");
         if(mNotificationPlayer != null)
             mNotificationPlayer.removeNotificationPlayer();
     }

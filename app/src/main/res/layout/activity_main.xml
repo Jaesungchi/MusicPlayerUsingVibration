@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#ffffff"
+    android:background="#A7EEFF"
     >
 
     <TextView
@@ -12,10 +12,10 @@
         android:layout_height="0dp"
         android:layout_weight="0.8"
         android:textSize="24sp"
-        android:text="Calm Music"
-        android:textColor="#6e6e6e"
+        android:text="Waver"
+        android:textColor="#EBFBFF"
         android:padding="8dp"
-        android:background="#FFDC3C"/>
+        android:background="@drawable/waver"/>
 
 
     <ListView
@@ -28,7 +28,7 @@
         android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="60dp"
-        android:background="#CC000000">
+        android:background="#50B4FF">
 
         <ImageView
             android:id="@+id/currentMusicAlbum"
