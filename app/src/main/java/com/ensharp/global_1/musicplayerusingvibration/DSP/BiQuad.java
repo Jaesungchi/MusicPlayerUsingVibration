@@ -99,7 +99,6 @@ public class BiQuad {
         float a0 = 1+alpha;
         switch (type) {
             case LP:
-                Log.i("bandpass", "LP");
                 b0 = ((1 - cosw0) / 2) / a0;
                 b1 = 2 * b0;
                 b2 = b0;
@@ -107,7 +106,6 @@ public class BiQuad {
                 a2 = (1 - alpha) / a0;
                 break;
             case HP:
-                Log.i("bandpass", "HP");
                 b0 = ((1+cosw0)/2)/a0;
                 b1 = -2*b0;
                 b2 = b0;
@@ -115,7 +113,6 @@ public class BiQuad {
                 a2 = (1 - alpha)/a0;
                 break;
             case BP:
-                Log.i("bandpass", "BP");
                 b0 = q * alpha / a0;
                 b1 = 0;
                 b2 = -b0;

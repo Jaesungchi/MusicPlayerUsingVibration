@@ -28,6 +28,7 @@ import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.audio.mp3.MP3File;
@@ -47,6 +48,7 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
     private ProgressUpdate progressUpdate;
     private int position;
     private boolean isPlaying;
+    private PopupMenu menu;
 
     private boolean mBound = false;
     // Intent 선언
@@ -205,7 +207,7 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
     }
 
     public void showMenu(View v) {
-        PopupMenu menu = new PopupMenu(this, v);
+        menu = new PopupMenu(this, v);
         menu.setOnMenuItemClickListener(this);
         menu.inflate(R.menu.menu_music);
         menu.show();
@@ -213,16 +215,11 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
 
     @Override
     public boolean onMenuItemClick(MenuItem item) {
-        switch (item.getItemId()) {
-            case MusicConverter.TOUGH:
-                mService.changeFilter(MusicConverter.TOUGH);
-                break;
-            case MusicConverter.DELICACY:
-                mService.changeFilter(MusicConverter.DELICACY);
-                break;
-            default:
-                return false;
-        }
+        if(item.getItemId() == menu.getMenu().getItem(0).getItemId())
+            mService.changeFilter(MusicConverter.TOUGH);
+        else if (item.getItemId() == menu.getMenu().getItem(1).getItemId())
+            mService.changeFilter(MusicConverter.DELICACY);
+
         return true;
     }
 

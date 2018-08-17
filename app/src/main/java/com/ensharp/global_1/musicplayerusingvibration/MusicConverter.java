@@ -5,13 +5,14 @@ import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.AsyncTask;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.ensharp.global_1.musicplayerusingvibration.DSP.AudioEvent;
 import com.ensharp.global_1.musicplayerusingvibration.DSP.BandPass;
-import com.ensharp.global_1.musicplayerusingvibration.DSP.HammingWindow;
 import com.ensharp.global_1.musicplayerusingvibration.DSP.PercussionOnsetDetector;
 import com.ensharp.global_1.musicplayerusingvibration.DSP.TarsosDSPAudioFloatConverter;
 import com.ensharp.global_1.musicplayerusingvibration.DSP.TarsosDSPAudioFormat;
+import com.ensharp.global_1.musicplayerusingvibration.DSP.WindowFunction;
 
 import java.io.Serializable;
 
@@ -20,7 +21,7 @@ import ca.uol.aig.fftpack.RealDoubleFFT;
 public class MusicConverter extends AsyncTask<Void, double[], Void> implements Serializable {
     private SamplesLoader mLoader;
     private AudioEvent audioEvent;
-    private HammingWindow hammingWindow;
+    private WindowFunction window;
     private PercussionOnsetDetector percussionDetector;
     private BandPass bandPass;
     private AudioManager audioManager;
@@ -61,7 +62,7 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
         super();
         frame = 0;
         mLoader = new SamplesLoader();
-        hammingWindow = new HammingWindow();
+        window = new WindowFunction();
         pausing = true;
 
         minSize = AudioTrack.getMinBufferSize(44100, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT);
@@ -147,9 +148,9 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
 
         // HammingWindow 전처리 적용
         if(filter == TOUGH)
-            result = normalizationToFloat(buffer, hammingWindow.generateCurve(buffer.length));
+            result = normalizationToFloat(buffer, window.generateCurve(WindowFunction.KAISER, buffer.length));
 
-        // Band-Pass Filter 전처리 적용
+        // Band-Pass Filter, Kaiser window 전처리 적용
         else if(filter == DELICACY) {
             float[] buf = new float[buffer.length];
 
