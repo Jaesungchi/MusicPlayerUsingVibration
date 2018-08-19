@@ -21,9 +21,12 @@ import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -35,13 +38,16 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements Serializable, View.OnClickListener {
     private BackPressCloseHandler backPressCloseHandler;
-
+    private EditText searchSong;
     private ListView listView;
     public static ArrayList<MusicVO> list;
+    private ArrayList<MusicVO> searchList;
     String TAG = "";
     private static final int REQUEST_CONNECT_DEVICE = 1;
     private static final int REQUEST_ENABLE_BT = 2;
     public static BluetoothConnector btConnector = null; // 블루투스
+
+    private MyAdapter adapter;
 
     // intent
     private Intent mainIntent;
@@ -79,12 +85,13 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
             System.exit(0);
         }
         else {
+            searchList = new ArrayList<>();
             // 디바이스 안에 있는 mp3 파일 리스트를 조회하여 List 생성
             getMusicList();
             listView = (ListView) findViewById(R.id.listview);
 
             // 음악리스트에 맞게 어댑터 생성 및 설정
-            MyAdapter adapter = new MyAdapter(this, list);
+            adapter = new MyAdapter(this, list);
             listView.setAdapter(adapter);
 
             btConnector = new BluetoothConnector(this,mHandler);
@@ -101,6 +108,28 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
 
             // 뒤로가기 핸들러 설정
             backPressCloseHandler = new BackPressCloseHandler(this);
+
+            // 검색창 생성
+            searchSong = (EditText) findViewById(R.id.searchKeyword);
+            searchSong.clearFocus();
+            searchSong.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    searchSong.clearComposingText();
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    // 검색어창에 문자를 입력할때마다 호출.
+                    // search 메소드 호출.
+                    String input = searchSong.getText().toString();
+                    search(input);
+                }
+            });
 
             // 하단바 UI 설정
             title = (TextView)findViewById(R.id.currentMusicTitle);
@@ -130,7 +159,7 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
                     // 음악 클릭 시 서비스에 position, list, musicConverter 전달
                     Log.e("music", position + "");
                     Log.e("jae", btConnector.checkOnline + "");
-                    if(btConnector.checkOnline) {
+                    //if(btConnector.checkOnline) {
                         serviceIntent.putExtra("position", position);
 
                         // preferences 파일 업데이트 후 하단바 업데이트
@@ -140,10 +169,10 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
                         }
                         startService(serviceIntent);
                         startActivity(musicIntent);
-                    }
-                    else {
-                        btConnector.enableBluetooth();
-                    }
+                    //}
+                    //else {
+                      //  btConnector.enableBluetooth();
+                    //}
                 }
             });
         }
@@ -222,8 +251,31 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
 
             // musicVO 리스트에 추가
             list.add(musicVO);
+            searchList.add(musicVO);
         }
         cursor.close();
+    }
+
+    public void search(String keyWord) {
+        //문자 입력시마다 리스트를 지우고 새로 뿌려준다.
+        list.clear();
+
+        //문자 입력이 없을 때는 모든 데이터를 보여준다.
+        if(keyWord.length() == 0) {
+            list.addAll(searchList);
+        }
+
+        // 문자 입력할때
+        else {
+            //리스트의 모든 데이터를 검색한다.
+            for(int i = 0; i < searchList.size(); i++) {
+                if(searchList.get(i).getTitle().toLowerCase().contains(keyWord)) {
+                    list.add(searchList.get(i));
+                }
+            }
+        }
+        // 리스트 데이터가 변경되었으므로 아답터를 갱신하여 검색된 데이터를 화면에 보여준다.
+        adapter.notifyDataSetChanged();
     }
 
     // 하단바 업데이트
