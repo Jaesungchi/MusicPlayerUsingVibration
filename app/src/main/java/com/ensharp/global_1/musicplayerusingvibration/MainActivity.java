@@ -33,6 +33,8 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+import javazoom.jl.player.Player;
+
 public class MainActivity extends AppCompatActivity implements Serializable, View.OnClickListener {
     private BackPressCloseHandler backPressCloseHandler;
 
@@ -72,8 +74,6 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
 
         preferences = getSharedPreferences("preferences", MODE_PRIVATE);
 
-        Log.e("yeongjoon", "Main-onCreate");
-
         // 저장소 읽기 권한 얻기 실패하면 종료
         if(!isReadStoragePermissionGranted()) {
             System.exit(0);
@@ -95,7 +95,7 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
             mainIntent = new Intent(this, MainActivity.class);
             musicIntent = new Intent(this, MusicActivity.class);
 
-            // 서비스에 음악리스트를 전달
+            // 서비스에 MainActivity, 음악리스트를 전달
             serviceIntent.putExtra("MusicList", (Serializable) list);
             startService(serviceIntent);
 
@@ -128,7 +128,8 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                     // 음악 클릭 시 서비스에 position, list, musicConverter 전달
-                    if(btConnector.checkOnline) {
+                    //if(btConnector.checkOnline) {
+                        serviceIntent = createServiceIntent();
                         serviceIntent.putExtra("position", position);
 
                         // preferences 파일 업데이트 후 하단바 업데이트
@@ -139,27 +140,35 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
                         startService(serviceIntent);
                         startActivity(musicIntent);
                     }
-                    else {
-                        btConnector.enableBluetooth();
-                    }
-                }
+                    //else {
+                    //    btConnector.enableBluetooth();
+                    //}
+                //}
             });
         }
+    }
+
+    public Intent createServiceIntent() {
+        return new Intent(this, PlayerService.class);
     }
 
     @Override
     protected void onStart(){
         super.onStart();
-        if(PlayerService.PLAY_STATE) {
-            // 서비스 실행 중일 때
-        }
     }
 
     @Override
     protected void onRestart() {
         super.onRestart();
-        Log.e("yeongjoon", "Main-onRestart");
         updateCurrentMusicPlayerBar();
+        if(PlayerService.PLAY_STATE) {
+            pause.setVisibility(View.VISIBLE);
+            play.setVisibility(View.GONE);
+        }
+        else {
+            pause.setVisibility(View.GONE);
+            play.setVisibility(View.VISIBLE);
+        }
     }
 
     // 앱 나갔을 때 번들에 현재 액티비티 상태 저장
@@ -188,6 +197,8 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
         }
         // 액티비티 종료
         else {
+            Serializable serializable = null;
+            serviceIntent.putExtra("MainActivity", serializable);
             finish();
         }
     }
@@ -463,7 +474,7 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
             case R.id.currentMusicPlay:
                 pause.setVisibility(View.VISIBLE);
                 play.setVisibility(View.GONE);
-                serviceIntent.putExtra("PlayerButton",PlayerService.PLAY_BUTTON);
+                serviceIntent.putExtra("PlayerButton", PlayerService.PLAY_BUTTON);
                 startService(serviceIntent);
                 break;
             case R.id.currentMusicPause:
@@ -475,14 +486,24 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
             case R.id.currentMusicPrevious:
                 serviceIntent.putExtra("PlayerButton",PlayerService.PREVIOUS_BUTTON);
                 startService(serviceIntent);
-                updateCurrentMusicFile(list, PlayerService.currentMusicPosition);
+                if(PlayerService.currentMusicPosition - 1 < 0)
+                    updateCurrentMusicFile(list, list.size() - 1);
+                else
+                    updateCurrentMusicFile(list, PlayerService.currentMusicPosition - 1);
                 updateCurrentMusicPlayerBar();
+                pause.setVisibility(View.VISIBLE);
+                play.setVisibility(View.GONE);
                 break;
             case R.id.currentMusicNext:
                 serviceIntent.putExtra("PlayerButton",PlayerService.NEXT_BUTTON);
                 startService(serviceIntent);
-                updateCurrentMusicFile(list, PlayerService.currentMusicPosition);
+                if(PlayerService.currentMusicPosition + 1 >= list.size())
+                    updateCurrentMusicFile(list, 0);
+                else
+                    updateCurrentMusicFile(list, PlayerService.currentMusicPosition + 1);
                 updateCurrentMusicPlayerBar();
+                pause.setVisibility(View.VISIBLE);
+                play.setVisibility(View.GONE);
                 break;
             case R.id.currentMusicAlbum:
             case R.id.currentMusicBar:

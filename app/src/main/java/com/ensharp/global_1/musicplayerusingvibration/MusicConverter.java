@@ -176,6 +176,9 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
 
             volume = pService.getCurrentVolume();
 
+            if(frame >= mLoader.musicbuffers.length)
+                continue;
+
             // 현재 frame의 sample 값들을 저장
             buffer = mLoader.musicbuffers[frame++];
 
@@ -186,7 +189,7 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
             String signal = makeSignal(processed);
             pService.sendData(signal);
 
-            Log.e("conv", signal);
+            //Log.e("conv", signal);
 
             audioTrack.write(buffer, 0, buffer.length);
             audioTrack.play();

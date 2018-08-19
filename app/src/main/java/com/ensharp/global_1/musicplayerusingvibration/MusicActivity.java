@@ -71,7 +71,6 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
             position = mService.getCurrentMusicPosition();
             list = mService.getMusicList();
 
-            Log.e("music", "onServiceConnected - set");
             setMusicContents(list.get(position));
 
             progressUpdate = new ProgressUpdate();
@@ -163,10 +162,8 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
     }
 
     public void setMusicContents(MusicVO musicDto) {
-        Log.e("music", "setMusicContents");
         while (mService.isConverting());
         try {
-            Log.e("conv", "playMusic");
             seekBar.setProgress(0);
             File file = new File(musicDto.getFilePath());
             try{
@@ -281,9 +278,9 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
                 try {
                     // 노래가 다 끝나면 다음 곡 재생
                     if(mService.isCompletePlay()) {
+                        setMusicContents(mService.getCurrentMusicVO(PlayerService.NEXT_BUTTON));
                         serviceIntent.putExtra("PlayerButton", PlayerService.NEXT_BUTTON);
                         startService(serviceIntent);
-                        setMusicContents(mService.getCurrentMusicVO(PlayerService.NEXT_BUTTON));
                     }
                     Thread.sleep(500);
                     if(mService!=null)

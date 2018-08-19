@@ -1,5 +1,6 @@
 package com.ensharp.global_1.musicplayerusingvibration;
 
+import android.app.Activity;
 import android.app.Service;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
@@ -11,6 +12,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.View;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -149,17 +151,6 @@ public class PlayerService extends Service {
             return START_REDELIVER_INTENT;
         }
 
-        // 리스트에서 누른 노래를 재생
-        if (bundle.containsKey("position")) {
-            Log.e("service", "position");
-            int position = bundle.getInt("position");
-            currentMusicPosition = position;
-            updateNotificationPlayer();
-            updateCurrentMusicFile();
-            PLAY_STATE = true;
-            mConverter.setMusicPath(mMusicList.get(position).getFilePath());
-        }
-
         // MainActivity, MusicActivity에서 버튼을 눌렀다면
         if (bundle.containsKey("PlayerButton")) {
             int button = bundle.getInt("PlayerButton");
@@ -168,12 +159,10 @@ public class PlayerService extends Service {
                 case PLAY_BUTTON:
                     mConverter.play();
                     PLAY_STATE = true;
-                    updateNotificationPlayer();
                     break;
                 case PAUSE_BUTTON:
                     mConverter.pause();
-                    //PLAY_STATE = false;
-                    updateNotificationPlayer();
+                    PLAY_STATE = false;
                     break;
                 case PREVIOUS_BUTTON:
                     setPreviousMusic();
@@ -184,6 +173,19 @@ public class PlayerService extends Service {
                     updateCurrentMusicFile();
                     break;
             }
+            updateNotificationPlayer();
+            return START_REDELIVER_INTENT;
+        }
+
+        // 리스트에서 누른 노래를 재생
+        if (bundle.containsKey("position")) {
+            Log.e("service", "position");
+            int position = bundle.getInt("position");
+            currentMusicPosition = position;
+            PLAY_STATE = true;
+            mConverter.setMusicPath(mMusicList.get(position).getFilePath());
+            updateNotificationPlayer();
+            updateCurrentMusicFile();
         }
 
         return START_REDELIVER_INTENT;
@@ -266,13 +268,11 @@ public class PlayerService extends Service {
     }
 
     private void updateNotificationPlayer() {
-        Log.i("notification", "service - updateNotificationPlayer");
         if(mNotificationPlayer != null)
             mNotificationPlayer.updateNotificationPlayer();
     }
 
     private void removeNotificationPlayer() {
-        Log.i("notification", "service - removeNotificationPlayer");
         if(mNotificationPlayer != null)
             mNotificationPlayer.removeNotificationPlayer();
     }
@@ -324,7 +324,6 @@ public class PlayerService extends Service {
             OutputStream tmpOut = null;
             // BluetoothSocket의 inputstream 과 outputstream을 얻는다.
             try {
-                Log.d("jae","connected Good");
                 tmpIn = socket.getInputStream();
                 tmpOut = socket.getOutputStream();
             } catch (IOException e) {
