@@ -195,7 +195,7 @@ public class BluetoothConnector {
                     Log.e(TAG, "unable to close() socket during connection failure", e2);
                 }
                 // 연결중? 혹은 연결 대기상태인 메소드를 호출한다.
-                this.start();
+                //this.start();
                 return;
             }
             // ConnectThread 클래스를 reset한다.

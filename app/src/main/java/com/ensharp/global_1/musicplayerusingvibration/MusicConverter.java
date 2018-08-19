@@ -48,6 +48,14 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
     // 기준 주파수
     final int[] standardFrequencies = new int[]{63,125,250,500,1000,2000};
 
+    // 이퀄라이저 주파수 별 데시벨 값
+    public int equalizer_63Hz;
+    public int equalizer_125Hz;
+    public int equalizer_250Hz;
+    public int equalizer_500Hz;
+    public int equalizer_1KHz;
+    public int equalizer_2KHz;
+
     public MusicConverter(PlayerService mService) {
         super();
         frame = 0;
@@ -175,21 +183,49 @@ public class MusicConverter extends AsyncTask<Void, double[], Void> implements S
         String signal = "";
         String temp = "";
 
-        for(int part = 0; part < 6; part++) {
+        for (int part = 0; part < 6; part++) {
             int gap = standardFrequencies[part] / 10;
             double max = 0.0;
-            for(int freq = 9 * gap; freq < 11 * gap; freq++) {
-                if(max < frequencies[freq])
+            for (int freq = 9 * gap; freq < 11 * gap; freq++) {
+                if (max < frequencies[freq])
                     max = frequencies[freq];
             }
 
             max *= 5.0;
-            temp = (int)(max) + "";
+            temp = (int) (max) + "";
 
-            if(temp.length() == 1)
+            if (temp.length() == 1)
                 temp = '0' + temp;
-            if(temp.length() >= 3)
+            if (temp.length() >= 3)
                 temp = "99";
+
+            // 이퀄라이저값이 기본값이 아니고 각 이퀄라이저 조정 범위와 맞는 part의 신호면
+            if (equalizer_63Hz != 0 && part == 0) {
+                temp += '0' + equalizer_63Hz * 5;
+            }
+            if (equalizer_125Hz != 0 && part == 1) {
+                temp += '0' + equalizer_125Hz * 5;
+            }
+            if (equalizer_250Hz != 0 && part == 2) {
+                temp += '0' + equalizer_250Hz * 5;
+            }
+            if (equalizer_500Hz != 0 && part == 3) {
+                temp += '0' + equalizer_500Hz * 5;
+            }
+            if (equalizer_1KHz != 0 && part == 4) {
+                temp += '0' + equalizer_1KHz * 5;
+            }
+            if (equalizer_2KHz != 0 && part == 5) {
+                temp += '0' + equalizer_2KHz * 5;
+            }
+
+            // signal이 0 미만이거나 99를 초과하면 최대,최소값으로 조정해줌
+            if(Integer.parseInt(temp) < 0) {
+                temp = "0";
+            }
+            if(Integer.parseInt(temp) > 99) {
+                temp = "99";
+            }
 
             signal += temp;
         }

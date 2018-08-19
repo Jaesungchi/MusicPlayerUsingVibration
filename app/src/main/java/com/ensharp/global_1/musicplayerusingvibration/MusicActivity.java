@@ -48,11 +48,13 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
     private ProgressUpdate progressUpdate;
     private int position;
     private boolean isPlaying;
+    private PopupMenu menu;
 
     private boolean mBound = false;
     // Intent 선언
     private Intent serviceIntent;
     private PlayerService mService;
+    private Intent equalizerIntent;
 
     private ServiceConnection mConnection = new ServiceConnection() {
         @Override
@@ -99,6 +101,7 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         lyrics.setMovementMethod(new ScrollingMovementMethod());
 
         serviceIntent = new Intent(this, PlayerService.class);
+        equalizerIntent = new Intent(this, EqualizerActivity.class);
         bindService(serviceIntent, mConnection, Context.BIND_AUTO_CREATE);
 
         // 각 재생 관련 버튼들 클릭 이벤트 리스너 설정
@@ -221,23 +224,22 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
     }
 
     public void showMenu(View v) {
-        PopupMenu menu = new PopupMenu(this, v);
+        menu = new PopupMenu(this, v);
         menu.setOnMenuItemClickListener(this);
         menu.inflate(R.menu.menu_music);
         menu.show();
     }
 
+
     @Override
     public boolean onMenuItemClick(MenuItem item) {
-        switch (item.getItemId()) {
-            case MusicConverter.TOUGH:
-                mService.changeFilter(MusicConverter.TOUGH);
-                break;
-            case MusicConverter.DELICACY:
-                mService.changeFilter(MusicConverter.DELICACY);
-                break;
-            default:
-                return false;
+        if(item.getItemId() == menu.getMenu().getItem(0).getItemId())
+            mService.changeFilter(MusicConverter.TOUGH);
+        else if (item.getItemId() == menu.getMenu().getItem(1).getItemId())
+            mService.changeFilter(MusicConverter.DELICACY);
+        else if (item.getItemId() == menu.getMenu().getItem(2).getItemId()) {
+            Log.e("equalizer start","");
+            startActivity(equalizerIntent);
         }
         return true;
     }

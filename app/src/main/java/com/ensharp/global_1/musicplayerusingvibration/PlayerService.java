@@ -91,12 +91,12 @@ public class PlayerService extends Service {
 //            connected(infor.getSocket(), infor.getDevice());
 //        }
         // 블루투스 연결이 안 됐으면
-        if(!bluetoothConnected) {
-            if (MainActivity.btConnector.getmSocket() != null) {
-                connected(MainActivity.btConnector.mmSocket, MainActivity.btConnector.mmDevice);
-                bluetoothConnected = true;
-            }
-        }
+        //if(!bluetoothConnected) {
+        //    if (MainActivity.btConnector.getmSocket() != null) {
+        //        connected(MainActivity.btConnector.mmSocket, MainActivity.btConnector.mmDevice);
+        //        bluetoothConnected = true;
+        //    }
+        //}
 
         // 리스트에서 누른 노래를 재생
         if(bundle.containsKey("position")) {
@@ -143,6 +143,26 @@ public class PlayerService extends Service {
                 mConverter.destroy();
                 removeNotificationPlayer();
             }
+        }
+
+        // Equalizer 바를 조절했다면
+        if(bundle.containsKey("equalizer_63Hz")) {
+            mConverter.equalizer_63Hz = bundle.getInt("equalizer_63Hz");
+        }
+        if(bundle.containsKey("equalizer_125Hz")) {
+            mConverter.equalizer_125Hz = bundle.getInt("equalizer_125Hz");
+        }
+        if(bundle.containsKey("equalizer_250Hz")) {
+            mConverter.equalizer_250Hz = bundle.getInt("equalizer_250Hz");
+        }
+        if(bundle.containsKey("equalizer_500Hz")) {
+            mConverter.equalizer_500Hz = bundle.getInt("equalizer_500Hz");
+        }
+        if(bundle.containsKey("equalizer_1KHz")) {
+            mConverter.equalizer_1KHz = bundle.getInt("equalizer_1KHz");
+        }
+        if(bundle.containsKey("equalizer_2KHz")) {
+            mConverter.equalizer_2KHz = bundle.getInt("equalizer_2KHz");
         }
 
         return START_REDELIVER_INTENT;
@@ -243,7 +263,7 @@ public class PlayerService extends Service {
             OutputStream tmpOut = null;
             // BluetoothSocket의 inputstream 과 outputstream을 얻는다.
             try {
-                Log.d("jae","connected Good");1
+                Log.d("jae","connected Good");
                 tmpIn = socket.getInputStream();
                 tmpOut = socket.getOutputStream();
             } catch (IOException e) {
