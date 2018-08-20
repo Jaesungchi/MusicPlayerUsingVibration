@@ -1,6 +1,7 @@
 package com.ensharp.global_1.musicplayerusingvibration;
 
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ContentResolver;
@@ -11,10 +12,12 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.provider.ContactsContract;
 import android.support.v4.app.NotificationCompat;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.ImageView;
 import android.widget.RemoteViews;
 
@@ -30,6 +33,7 @@ public class NotificationPlayer {
     private NotificationManager mNotificationManager;
     private NotificationManagerBuilder mNotificationManagerBuilder;
     private boolean isForeground;
+    private NotificationChannel mChannel;
 
     public NotificationPlayer(PlayerService service) {
         mService = service;
@@ -38,13 +42,18 @@ public class NotificationPlayer {
 
     // 해당 함수는 음악이 변경되거나 재생상태가 변경될 경우 호출될 예정이며 알림바에 등록된 Notification을 업데이트하는 역할
     public void updateNotificationPlayer() {
+        Log.i("notification", "updateNotificationPlayer");
         cancel();
         mNotificationManagerBuilder = new NotificationManagerBuilder();
         mNotificationManagerBuilder.execute();
+
+        mNotificationManagerBuilder.updateRemoteView(mNotificationManagerBuilder.createRemoteView(R.layout.activity_notification_player),
+                mNotificationManagerBuilder.createNotification());
     }
 
     // 해당 함수는 사용자가 알림바에서 Notification Player를 종료하고자 할 때 호출됩니다. 그리고 서비스를 foreground에서 내려 놓습니다.
     public void removeNotificationPlayer() {
+        Log.i("notification", "removeNotificationPlayer");
         cancel();
         mService.stopForeground(true);
         isForeground = false;
@@ -57,29 +66,54 @@ public class NotificationPlayer {
         }
     }
 
+    public void createChannel() {
+        Log.i("notification", "createChannel");
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            mChannel = new NotificationChannel(String.valueOf(NOTIFICATION_PLAYER_ID), "waver", NotificationManager.IMPORTANCE_DEFAULT);
+            mChannel.setDescription("waver notification bar");
+            mChannel.enableLights(false);
+            mChannel.enableVibration(false);
+            mChannel.setVibrationPattern(new long[]{0});
+            mChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+            mNotificationManager.createNotificationChannel(mChannel);
+        }
+    }
+
     private class NotificationManagerBuilder extends AsyncTask<Void, Void, Notification> {
         private RemoteViews mRemoteViews;
         private NotificationCompat.Builder mNotificationBuilder;
         private PendingIntent mMainPendingIntent;
 
+        public Notification createNotification() {
+            Notification notification = mNotificationBuilder.build();
+            notification.priority = Notification.PRIORITY_MAX;
+            notification.contentIntent = mMainPendingIntent;
+            return notification;
+        }
+
         @Override
         protected void onPreExecute() {
+            Log.i("notification", "onPreExecute");
             super.onPreExecute();
+            createChannel();
+            // 누르면 MainActivity 가 실행됨
             Intent mainActivity = new Intent(mService, MainActivity.class);
             mMainPendingIntent = PendingIntent.getActivity(mService, 0, mainActivity, 0);
             mRemoteViews = createRemoteView(R.layout.activity_notification_player);
             mNotificationBuilder = new NotificationCompat.Builder(mService);
-            mNotificationBuilder.setSmallIcon(R.mipmap.ic_launcher)
+            mNotificationBuilder.setSmallIcon(R.drawable.wave)
                     .setOngoing(true)
                     .setContentIntent(mMainPendingIntent)
+                    .setChannelId(String.valueOf(NOTIFICATION_PLAYER_ID))
                     .setContent(mRemoteViews);
 
-            Notification notification = mNotificationBuilder.build();
-            notification.priority = Notification.PRIORITY_MAX;
-            notification.contentIntent = mMainPendingIntent;
+            Notification notification = createNotification();
+            updateRemoteView(mRemoteViews, notification);
+
             if (!isForeground) {
                 isForeground = true;
                 // 서비스를 Foreground 상태로 만든다
+                Log.i("notification", "onPreExecute-Foreground");
                 mService.startForeground(NOTIFICATION_PLAYER_ID, notification);
             }
         }
@@ -89,7 +123,7 @@ public class NotificationPlayer {
             mNotificationBuilder.setContent(mRemoteViews);
             mNotificationBuilder.setContentIntent(mMainPendingIntent);
             mNotificationBuilder.setPriority(Notification.PRIORITY_MAX);
-            Notification notification = mNotificationBuilder.build();
+            Notification notification = createNotification();
             updateRemoteView(mRemoteViews, notification);
             return notification;
         }
@@ -105,6 +139,7 @@ public class NotificationPlayer {
         }
 
         private RemoteViews createRemoteView(int layoutId) {
+            Log.i("notification", "createRemoteView");
             RemoteViews remoteView = new RemoteViews(mService.getPackageName(), layoutId);
             Intent actionTogglePlay = new Intent(CommandActions.TOGGLE_PLAY);
             Intent actionForward = new Intent(CommandActions.FORWARD);
@@ -123,13 +158,14 @@ public class NotificationPlayer {
         }
 
         private void updateRemoteView(RemoteViews remoteViews, Notification notification) {
+            Log.i("notification", "updateRemoteView");
             if (mService.isPlaying()) {
                 remoteViews.setImageViewResource(R.id.btn_play_pause, R.drawable.pause);
             } else {
                 remoteViews.setImageViewResource(R.id.btn_play_pause, R.drawable.play);
             }
 
-            MusicVO currentMusic = mService.getCurrentMusicVO();
+            MusicVO currentMusic = mService.getCurrentMusicVO(-1);
 
             String title = currentMusic.getTitle();
             remoteViews.setTextViewText(R.id.txt_title, title);

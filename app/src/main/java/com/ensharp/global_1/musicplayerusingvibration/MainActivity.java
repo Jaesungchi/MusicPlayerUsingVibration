@@ -2,38 +2,42 @@ package com.ensharp.global_1.musicplayerusingvibration;
 
 import android.Manifest;
 import android.app.Activity;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothSocket;
-import android.content.ComponentName;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Message;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.List;
 
 import javazoom.jl.player.Player;
 
-public class MainActivity extends AppCompatActivity implements Serializable{
+public class MainActivity extends AppCompatActivity implements Serializable, View.OnClickListener {
     private BackPressCloseHandler backPressCloseHandler;
+
     private ListView listView;
     public static ArrayList<MusicVO> list;
     String TAG = "";
@@ -45,7 +49,15 @@ public class MainActivity extends AppCompatActivity implements Serializable{
     private Intent mainIntent;
     private Intent serviceIntent;
     private Intent musicIntent;
-    private PlayerService mService = null;
+
+    // 현재 재생 중인 노래
+    private LinearLayout musicBar;
+    private TextView title;
+    private TextView singer;
+    private ImageView album, previous, play, pause, next;
+
+    // SharedPreferences 파일 변수
+    private SharedPreferences preferences;
 
     private final Handler mHandler = new Handler() {
         @Override
@@ -59,6 +71,8 @@ public class MainActivity extends AppCompatActivity implements Serializable{
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        preferences = getSharedPreferences("preferences", MODE_PRIVATE);
 
         // 저장소 읽기 권한 얻기 실패하면 종료
         if(!isReadStoragePermissionGranted()) {
@@ -75,29 +89,55 @@ public class MainActivity extends AppCompatActivity implements Serializable{
 
             btConnector = new BluetoothConnector(this,mHandler);
             btConnector.enableBluetooth();
-            Log.e("jae", "1 " + btConnector.checkOnline);
 
             // intent 설정
             serviceIntent = new Intent(this, PlayerService.class);
             mainIntent = new Intent(this, MainActivity.class);
             musicIntent = new Intent(this, MusicActivity.class);
 
-            // 서비스에 음악리스트를 전달
+            // 서비스에 MainActivity, 음악리스트를 전달
             serviceIntent.putExtra("MusicList", (Serializable) list);
             startService(serviceIntent);
 
             // 뒤로가기 핸들러 설정
-            backPressCloseHandler = new BackPressCloseHandler(this, mService);
+            backPressCloseHandler = new BackPressCloseHandler(this);
+
+            // 하단바 UI 설정
+            title = (TextView)findViewById(R.id.currentMusicTitle);
+            singer = (TextView)findViewById(R.id.currentMusicSinger);
+            album = (ImageView)findViewById(R.id.currentMusicAlbum);
+            musicBar = (LinearLayout)findViewById(R.id.currentMusicBar);
+
+            previous = (ImageView)findViewById(R.id.currentMusicPrevious);
+            next = (ImageView)findViewById(R.id.currentMusicNext);
+            play = (ImageView)findViewById(R.id.currentMusicPlay);
+            pause = (ImageView)findViewById(R.id.currentMusicPause);
+
+            pause.setVisibility(View.VISIBLE);
+            play.setVisibility(View.GONE);
+
+            previous.setOnClickListener(this);
+            next.setOnClickListener(this);
+            play.setOnClickListener(this);
+            pause.setOnClickListener(this);
+            album.setOnClickListener(this);
+            musicBar.setOnClickListener(this);
 
             // 음악리스트에 있는 각 음악들 클릭 이벤트
             listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                     // 음악 클릭 시 서비스에 position, list, musicConverter 전달
-                    Log.e("music", position + "");
+
                     //if(btConnector.checkOnline) {
+                        serviceIntent = createServiceIntent();
                         serviceIntent.putExtra("position", position);
-                       // serviceIntent.putExtra("bluetooth", new BluetoothInformation(btConnector.getmSocket(), btConnector.getmDevice()));
+
+                        // preferences 파일 업데이트 후 하단바 업데이트
+                        if(!PlayerService.PLAY_STATE) {
+                            updateCurrentMusicFile(list, position);
+                            updateCurrentMusicPlayerBar();
+                        }
                         startService(serviceIntent);
                         startActivity(musicIntent);
                     //}
@@ -109,9 +149,27 @@ public class MainActivity extends AppCompatActivity implements Serializable{
         }
     }
 
+    public Intent createServiceIntent() {
+        return new Intent(this, PlayerService.class);
+    }
+
     @Override
     protected void onStart(){
         super.onStart();
+    }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        updateCurrentMusicPlayerBar();
+        if(PlayerService.PLAY_STATE) {
+            pause.setVisibility(View.VISIBLE);
+            play.setVisibility(View.GONE);
+        }
+        else {
+            pause.setVisibility(View.GONE);
+            play.setVisibility(View.VISIBLE);
+        }
     }
 
     // 앱 나갔을 때 번들에 현재 액티비티 상태 저장
@@ -126,15 +184,24 @@ public class MainActivity extends AppCompatActivity implements Serializable{
     public void onResume() {
         super.onResume();
         getIntent().getExtras();
+        updateCurrentMusicPlayerBar();
     }
 
     // 뒤로가기 버튼 클릭 이벤트
     @Override
     public void onBackPressed() {
         Intent serviceIntent = new Intent(this, PlayerService.class);
-        if(!mService.isPlaying())
-            backPressCloseHandler.onBackPressed();
-        stopService(serviceIntent);
+        // 노래가 재생되고 있는 상태가 아니라면
+        if(!PlayerService.PLAY_STATE) {
+            if (backPressCloseHandler.onBackPressed()) ;
+            stopService(serviceIntent);
+        }
+        // 액티비티 종료
+        else {
+            Serializable serializable = null;
+            serviceIntent.putExtra("MainActivity", serializable);
+            finish();
+        }
     }
 
     // 음악 리스트 얻기
@@ -167,6 +234,49 @@ public class MainActivity extends AppCompatActivity implements Serializable{
             list.add(musicVO);
         }
         cursor.close();
+    }
+
+    // 하단바 업데이트
+    private void updateCurrentMusicPlayerBar(){
+        // 현재 재생 중인 음악이 있으면
+        if(preferences != null && preferences.getString("currentMusicAlbum","") != ""){
+            // 노래 제목, 가수명 값 불러오기
+            title.setText(preferences.getString("currentMusicTitle",""));
+            singer.setText(preferences.getString("currentMusicSinger",""));
+
+            Log.e("title",title.getText()+"");
+            Log.e("signer",singer.getText()+"");
+
+            // 앨범 이미지 값 불러오기
+            byte[] albumBytes = new MyAdapter().getAlbumImage(getApplication(),
+                    Integer.parseInt(preferences.getString("currentMusicAlbum","")),
+                    170);
+            if(albumBytes == null)
+                return;
+            Bitmap bitmap = BitmapFactory.decodeByteArray(albumBytes, 0, albumBytes.length);
+            album.setImageBitmap(bitmap);
+
+            Log.e("preferences","not null, update complete");
+        }
+        else
+            Log.e("preferences","null");
+    }
+
+    // preferences 파일 업데이트
+    public void updateCurrentMusicFile(List<MusicVO> list, int currentMusicPosition){
+        // 현재 음악파일 VO
+        MusicVO currentMusicVO = list.get(currentMusicPosition);
+        SharedPreferences.Editor editor = preferences.edit();
+
+        // preferences 값 모두 삭제하기
+        editor.clear();
+        editor.commit();
+
+        // preferences에 현재 재생 음악 정보 저장하기
+        editor.putString("currentMusicTitle", currentMusicVO.getTitle());
+        editor.putString("currentMusicSinger", currentMusicVO.getArtist());
+        editor.putString("currentMusicAlbum", currentMusicVO.getAlbumId());
+        editor.commit();
     }
 
     // 저장소 읽기 권한 확인 여부
@@ -356,5 +466,50 @@ public class MainActivity extends AppCompatActivity implements Serializable{
      */
     public static boolean isGooglePhotosUri(Uri uri) {
         return "com.google.android.apps.photos.content".equals(uri.getAuthority());
+    }
+
+    // 하단바 클릭이벤트
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()){
+            case R.id.currentMusicPlay:
+                pause.setVisibility(View.VISIBLE);
+                play.setVisibility(View.GONE);
+                serviceIntent.putExtra("PlayerButton", PlayerService.PLAY_BUTTON);
+                startService(serviceIntent);
+                break;
+            case R.id.currentMusicPause:
+                pause.setVisibility(View.GONE);
+                play.setVisibility(View.VISIBLE);
+                serviceIntent.putExtra("PlayerButton",PlayerService.PAUSE_BUTTON);
+                startService(serviceIntent);
+                break;
+            case R.id.currentMusicPrevious:
+                serviceIntent.putExtra("PlayerButton",PlayerService.PREVIOUS_BUTTON);
+                startService(serviceIntent);
+                if(PlayerService.currentMusicPosition - 1 < 0)
+                    updateCurrentMusicFile(list, list.size() - 1);
+                else
+                    updateCurrentMusicFile(list, PlayerService.currentMusicPosition - 1);
+                updateCurrentMusicPlayerBar();
+                pause.setVisibility(View.VISIBLE);
+                play.setVisibility(View.GONE);
+                break;
+            case R.id.currentMusicNext:
+                serviceIntent.putExtra("PlayerButton",PlayerService.NEXT_BUTTON);
+                startService(serviceIntent);
+                if(PlayerService.currentMusicPosition + 1 >= list.size())
+                    updateCurrentMusicFile(list, 0);
+                else
+                    updateCurrentMusicFile(list, PlayerService.currentMusicPosition + 1);
+                updateCurrentMusicPlayerBar();
+                pause.setVisibility(View.VISIBLE);
+                play.setVisibility(View.GONE);
+                break;
+            case R.id.currentMusicAlbum:
+            case R.id.currentMusicBar:
+                startActivity(musicIntent);
+                break;
+        }
     }
 }

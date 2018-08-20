@@ -1,6 +1,7 @@
 package com.ensharp.global_1.musicplayerusingvibration;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -16,15 +17,17 @@ public class EqualizerActivity extends AppCompatActivity {
     private SeekBar seekBar_2KHz;
 
     private Intent serviceIntent;
+    private SharedPreferences preferences;
+    private SharedPreferences.Editor editor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_equalizer);
 
-        Log.e("equalizer start","");
-
-        serviceIntent = new Intent(this, MusicActivity.class);
+        serviceIntent = new Intent(this, PlayerService.class);
+        preferences = getSharedPreferences("preferences", MODE_PRIVATE);
+        editor = preferences.edit();
 
         // 데시벨 조정 seekBar 생성
         seekBar_63Hz = (SeekBar) findViewById(R.id.equalizer_seekbar_63Hz);
@@ -34,13 +37,13 @@ public class EqualizerActivity extends AppCompatActivity {
         seekBar_1KHz = (SeekBar) findViewById(R.id.equalizer_seekbar_1KHz);
         seekBar_2KHz = (SeekBar) findViewById(R.id.equalizer_seekbar_2KHz);
 
-        // 처음엔 다 0으로 초기화
-        seekBar_63Hz.setProgress(0);
-        seekBar_125Hz.setProgress(0);
-        seekBar_250Hz.setProgress(0);
-        seekBar_500Hz.setProgress(0);
-        seekBar_1KHz.setProgress(0);
-        seekBar_2KHz.setProgress(0);
+        // SharedPreferences에 저장된 값으로 초기화
+        seekBar_63Hz.setProgress(getPreferencesData("equalizer_63Hz"));
+        seekBar_125Hz.setProgress(getPreferencesData("equalizer_125Hz"));
+        seekBar_250Hz.setProgress(getPreferencesData("equalizer_250Hz"));
+        seekBar_500Hz.setProgress(getPreferencesData("equalizer_500Hz"));
+        seekBar_1KHz.setProgress(getPreferencesData("equalizer_1KHz"));
+        seekBar_2KHz.setProgress(getPreferencesData("equalizer_2KHz"));
 
         // 리스너
         seekBar_63Hz.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -52,8 +55,12 @@ public class EqualizerActivity extends AppCompatActivity {
             }
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+                // SharedPreferences에 이퀄라이저 데이터 저장
+                deletePreferencesData("equalizer_63Hz");
+                setPreferencesData("equalizer_63Hz",seekBar_63Hz.getProgress());
+
                 // seekBar.getProgress() 값을 얻어서 데시벨 조정
-                serviceIntent.putExtra("equalizer_63Hz",seekBar_63Hz.getProgress());
+                serviceIntent.putExtra("equalizer", "set");
                 startService(serviceIntent);
             }
         });
@@ -66,8 +73,11 @@ public class EqualizerActivity extends AppCompatActivity {
             }
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                // seekBar.getProgress() 값을 얻어서 데시벨 조정
-                serviceIntent.putExtra("equalizer_125Hz",seekBar_125Hz.getProgress());
+                // SharedPreferences에 이퀄라이저 데이터 저장
+                deletePreferencesData("equalizer_125Hz");
+                setPreferencesData("equalizer_125Hz",seekBar_125Hz.getProgress());
+
+                serviceIntent.putExtra("equalizer", "set");
                 startService(serviceIntent);
             }
         });
@@ -80,8 +90,11 @@ public class EqualizerActivity extends AppCompatActivity {
             }
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                // seekBar.getProgress() 값을 얻어서 데시벨 조정
-                serviceIntent.putExtra("equalizer_250Hz",seekBar_250Hz.getProgress());
+                // SharedPreferences에 이퀄라이저 데이터 저장
+                deletePreferencesData("equalizer_250Hz");
+                setPreferencesData("equalizer_250Hz",seekBar_250Hz.getProgress());
+
+                serviceIntent.putExtra("equalizer", "set");
                 startService(serviceIntent);
             }
         });
@@ -94,8 +107,11 @@ public class EqualizerActivity extends AppCompatActivity {
             }
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                // seekBar.getProgress() 값을 얻어서 데시벨 조정
-                serviceIntent.putExtra("equalizer_500Hz",seekBar_500Hz.getProgress());
+                // SharedPreferences에 이퀄라이저 데이터 저장
+                deletePreferencesData("equalizer_500Hz");
+                setPreferencesData("equalizer_500Hz",seekBar_500Hz.getProgress());
+
+                serviceIntent.putExtra("equalizer", "set");
                 startService(serviceIntent);
             }
         });
@@ -108,8 +124,11 @@ public class EqualizerActivity extends AppCompatActivity {
             }
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                // seekBar.getProgress() 값을 얻어서 데시벨 조정
-                serviceIntent.putExtra("equalizer_1KHz",seekBar_1KHz.getProgress());
+                // SharedPreferences에 이퀄라이저 데이터 저장
+                deletePreferencesData("equalizer_1KHz");
+                setPreferencesData("equalizer_1KHz",seekBar_1KHz.getProgress());
+
+                serviceIntent.putExtra("equalizer", "set");
                 startService(serviceIntent);
             }
         });
@@ -122,10 +141,31 @@ public class EqualizerActivity extends AppCompatActivity {
             }
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                // seekBar.getProgress() 값을 얻어서 데시벨 조정
-                serviceIntent.putExtra("equalizer_2KHz",seekBar_2KHz.getProgress());
+                // SharedPreferences에 이퀄라이저 데이터 저장
+                deletePreferencesData("equalizer_2KHz");
+                setPreferencesData("equalizer_2KHz",seekBar_2KHz.getProgress());
+
+                serviceIntent.putExtra("equalizer", "set");
                 startService(serviceIntent);
             }
         });
     }
+
+    // SharedPreferences Data 저장하기
+    private void  setPreferencesData(String key, int data){
+        editor.putInt(key, data);
+        editor.commit();
+    }
+
+    // SharedPreferences Data 삭제하기
+    private void deletePreferencesData(String key){
+        editor.remove(key);
+        editor.commit();
+    }
+
+    // SharedPreferences Data 불러오기
+    public int getPreferencesData(String key){
+        return preferences.getInt(key, 0);
+    }
+
 }

@@ -63,6 +63,8 @@
                     android:max="10"
                     android:progressTint="#FF9161"
                     android:thumbTint="#FF9161"
+                    android:progressBackgroundTint="#6e6e6e"
+                    android:secondaryProgressTint="#6e6e6e"
                     />
             </LinearLayout>
 
@@ -89,7 +91,9 @@
                     android:min="-10"
                     android:max="10"
                     android:progressTint="#FF9161"
-                    android:thumbTint="#FF9161"/>
+                    android:thumbTint="#FF9161"
+                    android:progressBackgroundTint="#6e6e6e"
+                    android:secondaryProgressTint="#6e6e6e"/>
             </LinearLayout>
 
             <LinearLayout
@@ -115,7 +119,9 @@
                     android:min="-10"
                     android:max="10"
                     android:progressTint="#FF9161"
-                    android:thumbTint="#FF9161"/>
+                    android:thumbTint="#FF9161"
+                    android:progressBackgroundTint="#6e6e6e"
+                    android:secondaryProgressTint="#6e6e6e"/>
             </LinearLayout>
 
             <LinearLayout
@@ -141,7 +147,9 @@
                     android:min="-10"
                     android:max="10"
                     android:progressTint="#FF9161"
-                    android:thumbTint="#FF9161"/>
+                    android:thumbTint="#FF9161"
+                    android:progressBackgroundTint="#6e6e6e"
+                    android:secondaryProgressTint="#6e6e6e"/>
             </LinearLayout>
 
             <LinearLayout
@@ -167,7 +175,9 @@
                     android:min="-10"
                     android:max="10"
                     android:progressTint="#FF9161"
-                    android:thumbTint="#FF9161"/>
+                    android:thumbTint="#FF9161"
+                    android:progressBackgroundTint="#6e6e6e"
+                    android:secondaryProgressTint="#6e6e6e"/>
             </LinearLayout>
 
             <LinearLayout

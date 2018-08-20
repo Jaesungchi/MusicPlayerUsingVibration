@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">MusicPlayerUsingVibration</string>
+    <string name="app_name">Waver</string>
     <!--  DeviceListActivity -->
     <string name="scanning">다른 장치 찾는 중...</string>
     <string name="select_device">블루투스 진동스피커를 눌러주세요.</string>

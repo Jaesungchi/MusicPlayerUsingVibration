@@ -1,13 +1,18 @@
 package com.ensharp.global_1.musicplayerusingvibration;
 
+import android.app.Activity;
 import android.app.Service;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.media.AudioManager;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.KeyEvent;
+import android.view.View;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,32 +25,34 @@ public class PlayerService extends Service {
 
     private MusicConverter mConverter;
     private ArrayList<MusicVO> mMusicList;
-    private int currentMusicPosition;
+    static public int currentMusicPosition;
     private NotificationPlayer mNotificationPlayer;
+    private AudioManager audioManager;
+    private MusicActivity currentMusicActivity = null;
 
     static final int PLAY_BUTTON = 0;
     static final int PAUSE_BUTTON = 1;
     static final int PREVIOUS_BUTTON = 2;
     static final int NEXT_BUTTON = 3;
 
-    public static String btDevice = null;
-
     private boolean bluetoothConnected = false;
     private static final String TAG = "BluetoothService";
-
-    // RFCOMM Protocol
-    private static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
     private ConnectedThread mConnectedThread;
 
     private int mState;
+
     // 상태를 나타내는 상태 변수
     private static final int STATE_NONE = 0; // we're doing nothing
     private static final int STATE_LISTEN = 1; // now listening for incoming connections
     private static final int STATE_CONNECTING = 2; // now initiating an outgoing connection
     private static final int STATE_CONNECTED = 3; // now connected to a remote device
 
-   // public MainActivity mActivity;
+    // SharedPreferences 파일 변수
+    private SharedPreferences preferences;
+
+    public static boolean PLAY_STATE = false;
+
     public OutputStream mOutputStream;
 
     public void changeFilter(int filter) {
@@ -65,11 +72,25 @@ public class PlayerService extends Service {
     public void onCreate() {
         super.onCreate();
 
+        preferences = getSharedPreferences("preferences", MODE_PRIVATE);
+        audioManager = (AudioManager)getSystemService(AUDIO_SERVICE);
         mConverter = new MusicConverter(this);
+        mConverter.setVolume(audioManager.getStreamVolume(AudioManager.STREAM_MUSIC));
+        setEqualizer();
         mConverter.execute();
         mMusicList = null;
         mNotificationPlayer = new NotificationPlayer(this);
         mConverter.setFilter(MusicConverter.DELICACY);
+    }
+
+    public int getCurrentVolume() {
+        return audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+    }
+
+    public void changeMusicActivity(MusicActivity musicActivity) {
+        if(currentMusicActivity != null)
+            currentMusicActivity.finish();
+        currentMusicActivity = musicActivity;
     }
 
     @Override
@@ -83,103 +104,142 @@ public class PlayerService extends Service {
         String action = intent.getAction();
 
         // MusicList를 받아온다
-        if(mMusicList == null)
+        if (mMusicList == null)
             mMusicList = (ArrayList<MusicVO>) bundle.getSerializable("MusicList");
 
-//        if(bundle.containsKey("bluetooth")) {
-//            BluetoothInformation infor = (BluetoothInformation)bundle.getSerializable("bluetooth");
-//            connected(infor.getSocket(), infor.getDevice());
-//        }
         // 블루투스 연결이 안 됐으면
-        //if(!bluetoothConnected) {
-        //    if (MainActivity.btConnector.getmSocket() != null) {
-        //        connected(MainActivity.btConnector.mmSocket, MainActivity.btConnector.mmDevice);
-        //        bluetoothConnected = true;
-        //    }
-        //}
-
-        // 리스트에서 누른 노래를 재생
-        if(bundle.containsKey("position")) {
-            Log.e("service", "position");
-            int position = bundle.getInt("position");
-            currentMusicPosition = position;
-            mConverter.setMusicPath(mMusicList.get(position).getFilePath());
+        if (!bluetoothConnected) {
+            if (MainActivity.btConnector.getmSocket() != null) {
+                connected(MainActivity.btConnector.mmSocket, MainActivity.btConnector.mmDevice);
+                bluetoothConnected = true;
+            }
         }
 
-        // MusicActivity에서 버튼을 눌렀다면
-        if(bundle.containsKey("PlayerButton")) {
+        // notification bar controller 에서 버튼을 눌렀을 때
+        if (action != null) {
+            if (CommandActions.TOGGLE_PLAY.equals(action)) {
+                if (isPlaying()) {
+                    mConverter.pause();
+                    if(currentMusicActivity != null)
+                        currentMusicActivity.syncWithNotification(PAUSE_BUTTON);
+                }
+                else {
+                    mConverter.play();
+                    if(currentMusicActivity != null)
+                        currentMusicActivity.syncWithNotification(PLAY_BUTTON);
+                }
+            }
+            else if (CommandActions.REWIND.equals(action)) {
+                if(currentMusicActivity != null)
+                    currentMusicActivity.syncWithNotification(PREVIOUS_BUTTON);
+                setPreviousMusic();
+            }
+            else if (CommandActions.FORWARD.equals(action)) {
+                if(currentMusicActivity != null)
+                    currentMusicActivity.syncWithNotification(NEXT_BUTTON);
+                setNextMusic();
+            }
+
+            else if (CommandActions.CLOSE.equals(action)) {
+                mConverter.destroy();
+                removeNotificationPlayer();
+                return START_NOT_STICKY;
+            }
+
+            updateCurrentMusicFile();
+            updateNotificationPlayer();
+
+            return START_REDELIVER_INTENT;
+        }
+
+        // MainActivity, MusicActivity에서 버튼을 눌렀다면
+        if (bundle.containsKey("PlayerButton")) {
             int button = bundle.getInt("PlayerButton");
 
             switch (button) {
                 case PLAY_BUTTON:
                     mConverter.play();
+                    PLAY_STATE = true;
                     break;
                 case PAUSE_BUTTON:
                     mConverter.pause();
+                    PLAY_STATE = false;
                     break;
                 case PREVIOUS_BUTTON:
                     setPreviousMusic();
+                    updateCurrentMusicFile();
                     break;
                 case NEXT_BUTTON:
                     setNextMusic();
+                    updateCurrentMusicFile();
                     break;
             }
             updateNotificationPlayer();
+            return START_REDELIVER_INTENT;
         }
 
-        // notification bar controller 에서 버튼을 눌렀을 때
-        if(action == null) {
-            if(CommandActions.TOGGLE_PLAY.equals(action)) {
-                if(isPlaying())
-                    mConverter.pause();
-                else
-                    mConverter.play();
-            }
-            else if(CommandActions.REWIND.equals(action))
-                setPreviousMusic();
-            else if(CommandActions.FORWARD.equals(action))
-                setNextMusic();
-            else if(CommandActions.CLOSE.equals(action)) {
-                mConverter.destroy();
-                removeNotificationPlayer();
-            }
+        // 리스트에서 누른 노래를 재생
+        if (bundle.containsKey("position")) {
+            Log.e("service", "position");
+            int position = bundle.getInt("position");
+            currentMusicPosition = position;
+            PLAY_STATE = true;
+            mConverter.setMusicPath(mMusicList.get(position).getFilePath());
+            updateNotificationPlayer();
+            updateCurrentMusicFile();
         }
 
-        // Equalizer 바를 조절했다면
-        if(bundle.containsKey("equalizer_63Hz")) {
-            mConverter.equalizer_63Hz = bundle.getInt("equalizer_63Hz");
-        }
-        if(bundle.containsKey("equalizer_125Hz")) {
-            mConverter.equalizer_125Hz = bundle.getInt("equalizer_125Hz");
-        }
-        if(bundle.containsKey("equalizer_250Hz")) {
-            mConverter.equalizer_250Hz = bundle.getInt("equalizer_250Hz");
-        }
-        if(bundle.containsKey("equalizer_500Hz")) {
-            mConverter.equalizer_500Hz = bundle.getInt("equalizer_500Hz");
-        }
-        if(bundle.containsKey("equalizer_1KHz")) {
-            mConverter.equalizer_1KHz = bundle.getInt("equalizer_1KHz");
-        }
-        if(bundle.containsKey("equalizer_2KHz")) {
-            mConverter.equalizer_2KHz = bundle.getInt("equalizer_2KHz");
-        }
+        // Equalizer 설정
+        if(bundle.containsKey("equalizer"))
+            setEqualizer();
 
         return START_REDELIVER_INTENT;
     }
 
+    private void setEqualizer(){
+        mConverter.equalizer_63Hz = getPreferencesData("equalizer_63Hz");
+        mConverter.equalizer_125Hz = getPreferencesData("equalizer_125Hz");
+        mConverter.equalizer_250Hz = getPreferencesData("equalizer_250Hz");
+        mConverter.equalizer_500Hz = getPreferencesData("equalizer_500Hz");
+        mConverter.equalizer_1KHz = getPreferencesData("equalizer_1KHz");
+        mConverter.equalizer_2KHz = getPreferencesData("equalizer_2KHz");
+    }
+
+    // SharedPreferences Data 불러오기
+    public int getPreferencesData(String key){
+        return preferences.getInt(key, 0);
+    }
+
+    public void updateCurrentMusicFile() {
+        // 현재 음악파일 VO
+        MusicVO currentMusicVO = mMusicList.get(currentMusicPosition);
+        SharedPreferences.Editor editor = preferences.edit();
+
+        // preferences 값 모두 삭제하기
+        editor.clear();
+        editor.commit();
+
+        // preferences에 현재 재생 음악 정보 저장하기
+        editor.putString("currentMusicTitle", currentMusicVO.getTitle());
+        editor.putString("currentMusicSinger", currentMusicVO.getArtist());
+        editor.putString("currentMusicAlbum", currentMusicVO.getAlbumId());
+        editor.commit();
+    }
+
     public void setPreviousMusic() {
         currentMusicPosition -= 1;
-        if(currentMusicPosition < 0)
+        if (currentMusicPosition < 0)
             currentMusicPosition = mMusicList.size() - 1;
         mConverter.setMusicPath(mMusicList.get(currentMusicPosition).getFilePath());
+        updateNotificationPlayer();
     }
 
     public void setNextMusic() {
         currentMusicPosition += 1;
-        if(currentMusicPosition >= mMusicList.size())
+        if (currentMusicPosition >= mMusicList.size())
             currentMusicPosition = 0;
         mConverter.setMusicPath(mMusicList.get(currentMusicPosition).getFilePath());
+        updateNotificationPlayer();
     }
 
     public int getCurrentMusicPosition() {
@@ -202,8 +262,28 @@ public class PlayerService extends Service {
         return mConverter.isPlaying();
     }
 
-    public MusicVO getCurrentMusicVO() {
-        return mMusicList.get(currentMusicPosition);
+    // 음악을 변경하기 전 호출되는 함수이며, 그 뒤 서비스에서 Position이 변경된다.
+    public MusicVO getCurrentMusicVO(int pressedButton) {
+        if(pressedButton == PlayerService.NEXT_BUTTON) {
+            if (mMusicList.size() <= currentMusicPosition + 1)
+                return mMusicList.get(0);
+            return mMusicList.get(currentMusicPosition + 1);
+        }
+        else if(pressedButton == PlayerService.PREVIOUS_BUTTON) {
+            if (currentMusicPosition - 1 < 0)
+                return mMusicList.get(mMusicList.size() - 1);
+            return mMusicList.get(currentMusicPosition - 1);
+        }
+        else
+            return mMusicList.get(currentMusicPosition);
+    }
+
+    public int getCurrentProgress() {
+        return (int) (mConverter.getCurrentProgressRate() * 200);
+    }
+
+    public void setFrame(int progress) {
+        mConverter.setFrame(progress / 200.0);
     }
 
     private void updateNotificationPlayer() {
@@ -263,11 +343,9 @@ public class PlayerService extends Service {
             OutputStream tmpOut = null;
             // BluetoothSocket의 inputstream 과 outputstream을 얻는다.
             try {
-                Log.d("jae","connected Good");
                 tmpIn = socket.getInputStream();
                 tmpOut = socket.getOutputStream();
-            } catch (IOException e) {
-            }
+            } catch (IOException e) { }
             mmInStream = tmpIn;
             mOutputStream = tmpOut; // 1. 데이터를 보내기 위한 OutputStrem
         }
