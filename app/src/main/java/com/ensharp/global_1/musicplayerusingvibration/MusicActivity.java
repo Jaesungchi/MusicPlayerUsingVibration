@@ -20,6 +20,7 @@ import android.renderscript.ScriptIntrinsicBlur;
 import android.support.v7.app.AppCompatActivity;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
@@ -27,6 +28,7 @@ import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.audio.mp3.MP3File;
@@ -46,11 +48,14 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
     private ProgressUpdate progressUpdate;
     private int position;
     private boolean isPlaying;
+    private PopupMenu menu;
 
     private boolean mBound = false;
     // Intent 선언
     private Intent serviceIntent;
     private PlayerService mService;
+    private Intent equalizerIntent;
+    private MusicActivity musicActivity = this;
 
     private ServiceConnection mConnection = new ServiceConnection() {
         @Override
@@ -60,11 +65,13 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
             mBound = true;
             isPlaying = true;
 
+            // 현재 뮤직 액티비티 변경
+            mService.changeMusicActivity(musicActivity);
+
             // 서비스에서 현재 음악파일 position 과 음악 리스트 가져오기
             position = mService.getCurrentMusicPosition();
             list = mService.getMusicList();
 
-            Log.e("music", "onServiceConnected - set");
             setMusicContents(list.get(position));
 
             progressUpdate = new ProgressUpdate();
@@ -95,6 +102,7 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         lyrics.setMovementMethod(new ScrollingMovementMethod());
 
         serviceIntent = new Intent(this, PlayerService.class);
+        equalizerIntent = new Intent(this, EqualizerActivity.class);
         bindService(serviceIntent, mConnection, Context.BIND_AUTO_CREATE);
 
         // 각 재생 관련 버튼들 클릭 이벤트 리스너 설정
@@ -156,10 +164,8 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
     }
 
     public void setMusicContents(MusicVO musicDto) {
-        Log.e("music", "setMusicContents");
         while (mService.isConverting());
         try {
-            Log.e("conv", "playMusic");
             seekBar.setProgress(0);
             File file = new File(musicDto.getFilePath());
             try{
@@ -204,24 +210,24 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
     }
 
     public void showMenu(View v) {
-        PopupMenu menu = new PopupMenu(this, v);
+        menu = new PopupMenu(this, v);
         menu.setOnMenuItemClickListener(this);
         menu.inflate(R.menu.menu_music);
         menu.show();
     }
 
+
     @Override
     public boolean onMenuItemClick(MenuItem item) {
-        switch (item.getItemId()) {
-            case MusicConverter.TOUGH:
-                mService.changeFilter(MusicConverter.TOUGH);
-                break;
-            case MusicConverter.DELICACY:
-                mService.changeFilter(MusicConverter.DELICACY);
-                break;
-            default:
-                return false;
+        if(item.getItemId() == menu.getMenu().getItem(0).getItemId())
+            mService.changeFilter(MusicConverter.TOUGH);
+        else if (item.getItemId() == menu.getMenu().getItem(1).getItemId())
+            mService.changeFilter(MusicConverter.DELICACY);
+        else if (item.getItemId() == menu.getMenu().getItem(2).getItemId()) {
+            Log.e("equalizer start","");
+            startActivity(equalizerIntent);
         }
+
         return true;
     }
 
@@ -253,6 +259,25 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         }
     }
 
+    public void syncWithNotification(int button) {
+        switch (button) {
+            case PlayerService.PAUSE_BUTTON:
+                pause.setVisibility(View.GONE);
+                play.setVisibility(View.VISIBLE);
+                break;
+            case PlayerService.PLAY_BUTTON:
+                pause.setVisibility(View.VISIBLE);
+                play.setVisibility(View.GONE);
+                break;
+            case PlayerService.PREVIOUS_BUTTON:
+                setMusicContents(mService.getCurrentMusicVO(PlayerService.PREVIOUS_BUTTON));
+                break;
+            case PlayerService.NEXT_BUTTON:
+                setMusicContents(mService.getCurrentMusicVO(PlayerService.NEXT_BUTTON));
+                break;
+        }
+    }
+
     class ProgressUpdate extends Thread{
         @Override
         public void run() {
@@ -260,9 +285,9 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
                 try {
                     // 노래가 다 끝나면 다음 곡 재생
                     if(mService.isCompletePlay()) {
+                        setMusicContents(mService.getCurrentMusicVO(PlayerService.NEXT_BUTTON));
                         serviceIntent.putExtra("PlayerButton", PlayerService.NEXT_BUTTON);
                         startService(serviceIntent);
-                        setMusicContents(mService.getCurrentMusicVO(PlayerService.NEXT_BUTTON));
                     }
                     Thread.sleep(500);
                     if(mService!=null)
@@ -272,6 +297,12 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
                 }
             }
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+        mService.changeMusicActivity(null);
+        finish();
     }
 
     @Override

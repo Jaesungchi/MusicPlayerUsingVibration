@@ -1,4 +1,7 @@
 package ca.uol.aig.fftpack;
+
+import android.util.Log;
+
 /**
   * FFT transform of a real periodic sequence.
   * @author Baoshe Zhang
