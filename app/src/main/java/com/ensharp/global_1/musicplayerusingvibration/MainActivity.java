@@ -111,7 +111,6 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
 
             // 검색창 생성
             searchSong = (EditText) findViewById(R.id.searchKeyword);
-            searchSong.clearFocus();
             searchSong.addTextChangedListener(new TextWatcher() {
                 @Override
                 public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -119,7 +118,7 @@ public class MainActivity extends AppCompatActivity implements Serializable, Vie
 
                 @Override
                 public void onTextChanged(CharSequence s, int start, int before, int count) {
-                    searchSong.clearComposingText();
+                    
                 }
 
                 @Override
